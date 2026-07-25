@@ -29,3 +29,18 @@ export const verifyIvrWebhook = async (req, res, next) => {
   }
   next();
 };
+
+export const verifyConnectWebhook = async (req, res, next) => {
+  const secret = env.connectWebhookSecret;
+  if (!secret) {
+    return res.status(503).json({
+      success: false,
+      message: 'CONNECT_WEBHOOK_SECRET is not configured on the server',
+    });
+  }
+  const provided = req.headers['x-webhook-secret'] || req.body?.secret;
+  if (provided !== secret) {
+    return res.status(401).json({ success: false, message: 'Invalid Amazon Connect webhook secret' });
+  }
+  next();
+};

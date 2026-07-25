@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import prisma from '../config/db.js';
 import { toSafeUser, userSelectWithCompany } from '../utils/tenant.js';
 import { hasWorkspaceAccess } from '../utils/subscriptionAccess.js';
+import { withDbRetry } from '../utils/dbRetry.js';
 
 export const authenticate = async (req, res, next) => {
   try {

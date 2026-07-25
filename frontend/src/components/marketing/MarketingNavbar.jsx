@@ -28,7 +28,7 @@ export default function MarketingNavbar() {
   }, [menuOpen]);
 
   return (
-    <header className={`mkt-nav ${scrolled ? 'mkt-nav--scrolled' : ''}`}>
+    <header className={`mkt-nav ${scrolled ? 'mkt-nav--scrolled' : ''} ${menuOpen ? 'mkt-nav--open' : ''}`}>
       <div className="mkt-nav__inner">
         <Link to="/" className="mkt-nav__brand" onClick={() => setMenuOpen(false)}>
           <BrandLogo size="sm" />

@@ -65,6 +65,7 @@ export const env = {
   metaWebhookVerifyToken: process.env.META_WEBHOOK_VERIFY_TOKEN || '',
   metaWebhookSecret: process.env.META_WEBHOOK_SECRET || '',
   ivrWebhookSecret: process.env.IVR_WEBHOOK_SECRET || '',
+  connectWebhookSecret: cleanEnv(process.env.CONNECT_WEBHOOK_SECRET, ''),
   gstVerificationMode: cleanEnv(process.env.GST_VERIFICATION_MODE, 'mock').toLowerCase(),
   gstApiKey: cleanEnv(process.env.GST_API_KEY, ''),
   gstApiUrl: cleanEnv(process.env.GST_API_URL, ''),

@@ -5228,13 +5228,119 @@ header,
   max-width: 1200px;
 }
 @media (max-width: 899px) {
+  .mkt-nav {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    padding: 0.75rem;
+  }
+  .mkt-nav--open {
+    position: fixed;
+    inset: 0 0 auto 0;
+  }
   .mkt-nav__inner {
+    position: relative;
+    z-index: 2;
+    min-height: 72px;
+    padding: 0.7rem 0.8rem;
     border-radius: 14px;
+    background: rgba(8, 9, 12, 0.96);
+    border-color: rgba(224, 191, 102, 0.2);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+  }
+  .mkt-nav__brand {
+    max-width: calc(100% - 56px);
+  }
+  .mkt-nav__brand .brand-logo-img {
+    max-height: 2.15rem;
+  }
+  .mkt-nav__brand strong {
+    font-size: 0.98rem;
+    line-height: 1.1;
+  }
+  .mkt-nav__brand small {
+    font-size: 0.72rem;
+  }
+  .mkt-nav__burger {
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.045);
+    z-index: 3;
+  }
+  .mkt-nav__burger span {
+    position: absolute;
+    width: 18px;
+    height: 2px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .mkt-nav__burger span:nth-child(1) {
+    transform: translateY(-6px);
+  }
+  .mkt-nav__burger span:nth-child(3) {
+    transform: translateY(6px);
+  }
+  .mkt-nav--open .mkt-nav__burger span:nth-child(1) {
+    transform: rotate(45deg);
+  }
+  .mkt-nav--open .mkt-nav__burger span:nth-child(2) {
+    opacity: 0;
+  }
+  .mkt-nav--open .mkt-nav__burger span:nth-child(3) {
+    transform: rotate(-45deg);
   }
   .mkt-nav__links.is-open {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    align-content: stretch;
+    gap: 1rem;
+    padding: 6.9rem 1rem 1rem;
+    overflow-y: auto;
     background:
-      linear-gradient(180deg, rgba(224, 191, 102, 0.08), transparent 34%),
+      linear-gradient(180deg, rgba(224, 191, 102, 0.1), transparent 34%),
+      radial-gradient(640px 360px at 100% 0%, rgba(125, 211, 252, 0.12), transparent 62%),
       #07080a;
+  }
+  .mkt-nav__links.is-open .mkt-nav__link {
+    display: flex;
+    align-items: center;
+    min-height: 54px;
+    padding: 0 1rem;
+    border-radius: 12px;
+    color: #d8dce8;
+    font-size: 1rem;
+    font-weight: 650;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .mkt-nav__links.is-open .mkt-nav__link.is-active {
+    color: #11100b;
+    background: linear-gradient(135deg, #fff0ae, #e0bf66 58%, #b8872f);
+    border-color: rgba(255, 246, 205, 0.52);
+  }
+  .mkt-nav__mobile-cta {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+    margin-top: 0.5rem;
+    padding: 1rem;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .mkt-nav__mobile-cta .mkt-btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 0.95rem;
   }
   .mkt-home-hero {
     min-height: auto;
