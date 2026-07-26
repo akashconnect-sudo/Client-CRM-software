@@ -210,7 +210,7 @@ model CallLog {
   companyId         String     @map("company_id")
   leadId            String?    @map("lead_id")
   employeeId        String?    @map("employee_id")
-  customerPhone     String     @map("customer_phone")
+  customerPhone     String?    @map("customer_phone")
   ivrAgentId        String?    @map("ivr_agent_id")
   callType          CallType   @map("call_type")
   callStatus        CallStatus @map("call_status")

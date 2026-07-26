@@ -37,7 +37,7 @@ POST /api/connect/contact-event?companyId=<YOUR_COMPANY_UUID>
 | Field | Required | Notes |
 |-------|----------|--------|
 | `contactId` | Yes | Stored as `ivrProviderCallId` (dedupes Lambda retries) |
-| `customerPhoneNumber` | Yes | Matched to Lead `phone` (last 10 digits) |
+| `customerPhoneNumber` | No | Matched to Lead `phone` (last 10 digits). Null/missing allowed for chat/test contacts — saves `customerPhone` as null |
 | `agentUsername` | No | Matched to User `ivrAgentId`, then email local-part, then `name` |
 | `queueName` | No | Saved into `notes` |
 | `channel` | No | `VOICE` or `CHAT` — saved into `notes` |
@@ -47,7 +47,7 @@ POST /api/connect/contact-event?companyId=<YOUR_COMPANY_UUID>
 | `status` | No | `COMPLETED`→`ANSWERED`, `MISSED`, `FAILED`, `BUSY` |
 | `recordingUrl` | No | → `recordingUrl` |
 
-If `agentUsername` does not match a user, `employeeId` is left `null` (no error). Same for unmatched phones and `leadId`.
+If `agentUsername` does not match a user, `employeeId` is left `null` (no error). Same for missing/unmatched phones and `leadId`. Only `contactId` is required.
 
 ### Agent matching tip
 
@@ -266,7 +266,7 @@ Expect `201` with `success: true` and a `data` CallLog object. Check CRM → Cal
 | Connect / API field | CallLog column |
 |---------------------|----------------|
 | `contactId` | `ivrProviderCallId` |
-| `customerPhoneNumber` | `customerPhone` (+ Lead match → `leadId`) |
+| `customerPhoneNumber` | `customerPhone` (optional; Lead match → `leadId` when present) |
 | `agentUsername` | `ivrAgentId` (+ User match → `employeeId`) |
 | status `COMPLETED` | `callStatus` = `ANSWERED`, `callType` = `INCOMING` |
 | status `MISSED` | `callStatus` = `MISSED`, `callType` = `MISSED` |

@@ -85,13 +85,16 @@ export async function processConnectContactEvent(payload, companyId) {
   if (!contactId || !String(contactId).trim()) {
     throw Object.assign(new Error('contactId is required'), { statusCode: 400 });
   }
-  if (!customerPhoneNumber || !String(customerPhoneNumber).trim()) {
-    throw Object.assign(new Error('customerPhoneNumber is required'), { statusCode: 400 });
-  }
 
-  const phone = String(customerPhoneNumber).trim();
+  // Chat / test contacts often have no phone — allow null (only contactId is required)
+  const rawPhone =
+    customerPhoneNumber == null || customerPhoneNumber === ''
+      ? null
+      : String(customerPhoneNumber).trim();
+  const phone = rawPhone || null;
+
   const employee = await resolveEmployeeByAgentUsername(companyId, agentUsername);
-  const lead = await resolveLeadByPhone(companyId, phone);
+  const lead = phone ? await resolveLeadByPhone(companyId, phone) : null;
 
   const callStatus = CONNECT_STATUS_MAP[statusRaw] || 'ANSWERED';
   const callType = callStatus === 'MISSED' ? 'MISSED' : 'INCOMING';
@@ -121,7 +124,7 @@ export async function processConnectContactEvent(payload, companyId) {
       data: {
         leadId: lead?.id || existing.leadId,
         employeeId: employee?.id || existing.employeeId,
-        customerPhone: phone,
+        customerPhone: phone ?? existing.customerPhone,
         ivrAgentId: agentUsername ? String(agentUsername) : existing.ivrAgentId,
         callType,
         callStatus,
@@ -185,7 +188,7 @@ export async function processConnectContactEvent(payload, companyId) {
       title: 'Call recording saved',
       message: lead
         ? `Amazon Connect recording saved for lead ${lead.customerName}`
-        : `Amazon Connect recording saved for ${phone}`,
+        : `Amazon Connect recording saved for ${phone || contactId}`,
       leadId: lead?.id,
       callId: callLog.id,
     });
