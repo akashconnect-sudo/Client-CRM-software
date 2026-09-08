@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import prisma from '../config/db.js';
 import { ensureTrialColumn, trialEndDate, hasWorkspaceAccess } from '../utils/subscriptionAccess.js';
+import { upsertTrialSubscription, parseSignupEntitlement } from './subscriptionService.js';
 
 const DEFAULT_SETTINGS = {
   google_webhook_secret: '',
@@ -46,14 +47,32 @@ export async function getDefaultCompany() {
 }
 
 
-export async function createCompany({ name, plan = 'STARTER', contactEmail, contactPhone }) {
+export async function createCompany({
+  name,
+  plan = 'STARTER',
+  contactEmail,
+  contactPhone,
+  modules,
+  tier,
+  billingCycleMonths,
+  extraSeats,
+  seatCount,
+}) {
   await ensureTrialColumn();
   const ends = trialEndDate();
+  const entitlement = parseSignupEntitlement({
+    plan,
+    modules,
+    tier: tier || plan,
+    billingCycleMonths,
+    extraSeats,
+    seatCount,
+  });
   const company = await prisma.company.create({
     data: {
       name: String(name).trim(),
       gstin: internalGstin(),
-      plan,
+      plan: entitlement.tier,
       subscriptionStatus: 'ACTIVE',
       contactEmail: contactEmail ? String(contactEmail).toLowerCase() : null,
       contactPhone: contactPhone || null,
@@ -65,7 +84,21 @@ export async function createCompany({ name, plan = 'STARTER', contactEmail, cont
   `;
 
   await seedCompanyDefaults(company.id);
-  return { ...company, trialEndsAt: ends };
+  await upsertTrialSubscription(company.id, entitlement);
+
+  if (entitlement.modules.includes('IVR')) {
+    await prisma.iVRIntegration.create({
+      data: {
+        companyId: company.id,
+        mode: 'NATIVE',
+        provider: 'AMAZON_CONNECT',
+        webhookSecret: randomUUID(),
+        status: 'CONNECTED',
+      },
+    }).catch(() => {});
+  }
+
+  return { ...company, trialEndsAt: ends, plan: entitlement.tier };
 }
 
 export async function getCompanyProfile(companyId) {

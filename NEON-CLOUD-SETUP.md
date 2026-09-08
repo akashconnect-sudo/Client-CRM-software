@@ -52,7 +52,7 @@ Password kabhi GitHub par commit mat karo.
 Test:
 
 ```powershell
-cd c:\Users\akash\OneDrive\Desktop\CRM\backend
+cd E:\CRM\backend
 npx prisma db execute --stdin --schema=prisma/schema.prisma <<< "SELECT 1"
 # ya
 node ../scripts/test-neon-connection.js

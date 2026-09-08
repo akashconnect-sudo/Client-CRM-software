@@ -1,10 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { getChartHoverCursor } from '../utils/chartTheme';
 
-export default function EmployeePerformanceChart({ data, chartTick, tooltipStyle }) {
+export default function EmployeePerformanceChart({ data, chartTick, tooltipStyle, isDark = true }) {
   const navigate = useNavigate();
   const [activeId, setActiveId] = useState(null);
+  const tip = tooltipStyle?.contentStyle
+    ? tooltipStyle
+    : {
+        contentStyle: tooltipStyle,
+        labelStyle: { color: isDark ? '#f5f5f4' : '#1c1917', fontWeight: 650 },
+        itemStyle: { color: isDark ? '#d6d3d1' : '#57534e' },
+        wrapperStyle: { outline: 'none', zIndex: 40 },
+      };
+  const hoverCursor = getChartHoverCursor(isDark);
 
   const onBarClick = (barData) => {
     const row = barData?.payload;
@@ -27,7 +37,13 @@ export default function EmployeePerformanceChart({ data, chartTick, tooltipStyle
           <BarChart data={data} margin={{ bottom: 20 }}>
             <XAxis dataKey="name" tick={{ fontSize: 10, fill: chartTick }} interval={0} angle={-20} textAnchor="end" height={50} />
             <YAxis tick={{ fill: chartTick, fontSize: 11 }} />
-            <Tooltip contentStyle={tooltipStyle} />
+            <Tooltip
+              contentStyle={tip.contentStyle}
+              labelStyle={tip.labelStyle}
+              itemStyle={tip.itemStyle}
+              wrapperStyle={tip.wrapperStyle}
+              cursor={hoverCursor}
+            />
             <Bar
               dataKey="leads"
               name="Leads"
@@ -44,17 +60,10 @@ export default function EmployeePerformanceChart({ data, chartTick, tooltipStyle
                 />
               ))}
             </Bar>
-            <Bar dataKey="calls" fill="#8b5cf6" name="Calls" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
         </div>
       </div>
-      <p className="text-xs text-primary-500 mt-3">
-        Or view all in{' '}
-        <button type="button" className="hover:underline font-medium" onClick={() => navigate('/reports?tab=employees')}>
-          Reports → Employees
-        </button>
-      </p>
     </div>
   );
 }

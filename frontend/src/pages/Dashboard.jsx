@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   PieChart,
@@ -22,69 +22,119 @@ import DashboardActionDock from '../components/DashboardActionDock';
 import StatCard from '../components/StatCard';
 import EmployeePerformanceChart from '../components/EmployeePerformanceChart';
 import LoadingSpinner from '../components/LoadingSpinner';
-import PageHeader from '../components/PageHeader';
 import { useTheme } from '../context/ThemeContext';
 import { SOURCE_LABELS, STATUS_LABELS, STATUS_CHART_COLORS } from '../utils/constants';
+import { userCanAccessLeads, userCanAccessIVR, userCanAccessAI } from '../utils/planAccess';
+import AiAdvisorChat from '../components/AiAdvisorChat';
+import { getChartTooltipProps, getChartHoverCursor } from '../utils/chartTheme';
 
-const SOURCE_COLORS = ['#3b82f6', '#8b5cf6', '#10b981'];
+const SOURCE_COLORS = ['#c9a227', '#3b82f6', '#10b981', '#8b5cf6'];
 const CALL_COLORS = ['#22c55e', '#ef4444', '#64748b'];
 
-function ChartCard({ title, subtitle, children, className = '' }) {
+function ChartCard({ title, subtitle, action, children, className = '' }) {
   return (
-    <div className={`dashboard-chart-card card ${className}`}>
-      <div className="dashboard-chart-head">
-        <h2 className="dashboard-chart-title">{title}</h2>
-        {subtitle && <p className="dashboard-chart-sub">{subtitle}</p>}
+    <div className={`dash-panel ${className}`}>
+      <div className="dash-panel__head">
+        <div>
+          <h2 className="dash-panel__title">{title}</h2>
+          {subtitle && <p className="dash-panel__sub">{subtitle}</p>}
+        </div>
+        {action}
       </div>
-      <div className="dashboard-chart-body">{children}</div>
+      <div className="dash-panel__body">{children}</div>
     </div>
+  );
+}
+
+function PipelineBars({ rows, total, onOpen }) {
+  if (!rows.length) {
+    return <p className="dash-empty">No pipeline data yet</p>;
+  }
+  return (
+    <ul className="dash-funnel">
+      {rows.map((row) => {
+        const pct = total > 0 ? Math.round((row.value / total) * 100) : 0;
+        return (
+          <li key={row.status}>
+            <button type="button" className="dash-funnel__row" onClick={() => onOpen(row.status)}>
+              <div className="dash-funnel__meta">
+                <span>{row.name}</span>
+                <strong>
+                  {row.value}
+                  <em>{pct}%</em>
+                </strong>
+              </div>
+              <div className="dash-funnel__track" aria-hidden="true">
+                <span style={{ width: `${Math.max(pct, 3)}%`, background: row.fill }} />
+              </div>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
 export default function Dashboard() {
   const { isAdmin, user } = useAuth();
-  const showEnterpriseAdvisor = isAdmin && user?.plan === 'ENTERPRISE';
+  const hasLeads = userCanAccessLeads(user);
+  const hasIvr = userCanAccessIVR(user);
+  const canAI = userCanAccessAI(user);
+  const showEnterpriseAdvisor = isAdmin && (canAI || (user?.plan === 'ENTERPRISE' && hasLeads));
   const navigate = useNavigate();
   const { isDark } = useTheme();
   const chartTick = isDark ? '#94a3b8' : '#64748b';
   const gridStroke = isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.2)';
-  const tooltipStyle = {
-    background: 'var(--surface-elevated)',
-    border: '1px solid var(--border)',
-    borderRadius: '12px',
-    color: 'var(--text)',
-    fontSize: '13px',
-  };
+  const tip = getChartTooltipProps(isDark);
+  const hoverCursor = getChartHoverCursor(isDark);
   const [data, setData] = useState(null);
   const [followUps, setFollowUps] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async ({ soft = false } = {}) => {
+    if (soft) setRefreshing(true);
+    else setLoading(true);
+    setError('');
+    try {
+      const requests = [reportsApi.dashboard()];
+      if (showEnterpriseAdvisor) {
+        requests.push(followUpsApi.list(), employeesApi.list());
+      }
+      const [dashboardRes, followUpsRes, employeesRes] = await Promise.all(requests);
+      setData(dashboardRes.data.data);
+      if (showEnterpriseAdvisor) {
+        setFollowUps(followUpsRes?.data?.data || []);
+        setEmployees(employeesRes?.data?.data || []);
+      }
+    } catch {
+      setError('Could not load dashboard');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const requests = [reportsApi.dashboard()];
-    if (showEnterpriseAdvisor) {
-      requests.push(followUpsApi.list(), employeesApi.list());
-    }
-
-    Promise.all(requests)
-      .then(([dashboardRes, followUpsRes, employeesRes]) => {
-        setData(dashboardRes.data.data);
-        if (showEnterpriseAdvisor) {
-          setFollowUps(followUpsRes?.data?.data || []);
-          setEmployees(employeesRes?.data?.data || []);
-        }
-      })
-      .catch(() => setError('Could not load dashboard'))
-      .finally(() => setLoading(false));
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showEnterpriseAdvisor]);
+
+  const intake7d = useMemo(
+    () => (data?.leadsLast7Days || []).reduce((s, d) => s + (d.count || 0), 0),
+    [data]
+  );
 
   if (loading) return <LoadingSpinner className="min-h-[50vh]" />;
   if (error) {
     return (
-      <div className="page-enter">
-        <PageHeader title="Dashboard" subtitle="Overview" />
+      <div className="page-enter dash">
         <div className="alert-error">{error}</div>
+        <button type="button" className="btn-secondary mt-4" onClick={() => load()}>
+          Retry
+        </button>
       </div>
     );
   }
@@ -106,92 +156,299 @@ export default function Dashboard() {
     .filter((s) => s.value > 0)
     .sort((a, b) => b.value - a.value);
 
+  const statusTotal = statusData.reduce((s, r) => s + r.value, 0);
   const trendData = data.leadsLast7Days || [];
   const callData = (data.callBreakdown || []).filter((c) => c.value > 0);
+  const answered = data.answeredCalls ?? 0;
+  const missed = data.missedCalls ?? 0;
+  const totalCalls = data.totalCalls ?? answered + missed;
+  const connectRate = totalCalls > 0 ? Math.round((answered / totalCalls) * 100) : 0;
 
-  const statCards = isAdmin
-    ? [
-        { title: 'Total Leads', value: data.totalLeads, color: 'primary', to: '/leads' },
-        { title: 'New Leads', value: data.newLeads, color: 'slate', to: '/leads?status=NEW' },
-        { title: 'Converted', value: data.convertedLeads, color: 'green', to: '/leads?status=CONVERTED' },
-        { title: 'Conversion %', value: `${data.conversionRate}%`, color: 'green', to: '/reports?tab=conversions' },
-        { title: 'Today Follow-ups', value: data.todayFollowUps, color: 'amber', to: '/follow-ups?type=today' },
-        { title: 'Total Calls', value: data.totalCalls, color: 'primary', to: '/calls' },
-        { title: 'Answered', value: data.answeredCalls, color: 'green', to: '/calls?callStatus=ANSWERED' },
-        { title: 'Missed', value: data.missedCalls, color: 'red', to: '/calls?callStatus=MISSED' },
-      ]
+  const primaryStats = hasLeads
+    ? isAdmin
+      ? [
+          { title: 'Total leads', value: data.totalLeads, color: 'gold', to: '/leads', hint: 'Open pipeline' },
+          { title: 'New', value: data.newLeads, color: 'slate', to: '/leads?status=NEW' },
+          { title: 'Converted', value: data.convertedLeads, color: 'green', to: '/leads?status=CONVERTED' },
+          { title: 'Conversion', value: `${data.conversionRate}%`, color: 'green', to: '/reports?tab=conversions' },
+        ]
+      : [
+          { title: 'My leads', value: data.myAssignedLeads ?? data.totalLeads, color: 'gold', to: '/leads' },
+          { title: 'New', value: data.newLeads, color: 'slate', to: '/leads?status=NEW' },
+          { title: 'Converted', value: data.convertedLeads, color: 'green', to: '/leads?status=CONVERTED' },
+          { title: 'Pending', value: data.myPendingLeads, color: 'amber', to: '/leads?status=ASSIGNED' },
+        ]
     : [
-        { title: 'My Leads', value: data.myAssignedLeads ?? data.totalLeads, color: 'primary', to: '/leads' },
-        { title: 'New', value: data.newLeads, color: 'slate', to: '/leads?status=NEW' },
-        { title: 'Converted', value: data.convertedLeads, color: 'green', to: '/leads?status=CONVERTED' },
-        { title: 'Conversion %', value: `${data.conversionRate}%`, color: 'green', to: '/leads?status=CONVERTED' },
-        { title: 'Follow-ups today', value: data.todayFollowUps, color: 'amber', to: '/follow-ups?type=today' },
-        { title: 'Pending', value: data.myPendingLeads, color: 'amber', to: '/leads?status=ASSIGNED' },
+        { title: 'Total calls', value: totalCalls, color: 'gold', to: '/calls', hint: 'Call history' },
+        { title: 'Connected', value: answered, color: 'green', to: '/calls?callStatus=ANSWERED' },
+        { title: 'Missed', value: missed, color: 'red', to: '/calls?callStatus=MISSED' },
+        { title: 'Connect rate', value: `${connectRate}%`, color: 'green', to: '/calls' },
       ];
 
+  const openActions = [
+    ...(hasLeads
+      ? [
+          {
+            id: 'followups',
+            label: 'Follow-ups due',
+            value: data.todayFollowUps ?? 0,
+            hint: 'Today',
+            to: '/follow-ups?type=today',
+            tone: 'amber',
+          },
+          {
+            id: 'new',
+            label: 'New leads',
+            value: data.newLeads ?? 0,
+            hint: 'Needs owners',
+            to: '/leads?status=NEW',
+            tone: 'blue',
+          },
+        ]
+      : []),
+    ...(hasIvr && isAdmin
+      ? [
+          {
+            id: 'missed',
+            label: 'Missed calls',
+            value: missed,
+            hint: 'Call Bridge',
+            to: '/calls?callStatus=MISSED',
+            tone: 'rose',
+          },
+          ...(!hasLeads
+            ? [
+                {
+                  id: 'answered',
+                  label: 'Connected calls',
+                  value: answered,
+                  hint: 'Answered',
+                  to: '/calls?callStatus=ANSWERED',
+                  tone: 'green',
+                },
+                {
+                  id: 'settings-ivr',
+                  label: 'IVR setup',
+                  value: '→',
+                  hint: 'Connect provider',
+                  to: '/settings',
+                  tone: 'blue',
+                },
+              ]
+            : []),
+        ]
+      : []),
+    ...(!hasLeads && !hasIvr
+      ? [
+          {
+            id: 'settings',
+            label: 'Settings',
+            value: '→',
+            hint: 'Choose modules',
+            to: '/settings',
+            tone: 'blue',
+          },
+        ]
+      : []),
+  ];
+
+  const moduleLabel = hasLeads && hasIvr ? 'Leads + IVR' : hasIvr ? 'IVR calling' : 'Lead pipeline';
+
   return (
-    <div className="page-enter dashboard-page">
-      <PageHeader
-        title="Command Center"
-        subtitle={isAdmin ? 'Leads, calls & team performance at a glance' : 'Your pipeline & follow-ups'}
-      />
+    <div className="page-enter dash">
+      <header className="dash-top">
+        <div className="dash-top__copy">
+          <p className="dash-top__eyebrow">{user?.companyName || 'Workspace'}</p>
+          <h1>Dashboard</h1>
+          <p className="dash-top__sub">
+            {hasLeads && hasIvr
+              ? isAdmin
+                ? 'Leads, calls, and follow-ups for your floor — live overview.'
+                : 'Your assigned pipeline and today’s follow-ups.'
+              : hasIvr
+                ? 'IVR call desk — manage calls, recordings, and connection status.'
+                : isAdmin
+                  ? 'Lead pipeline and follow-ups for your floor.'
+                  : 'Your assigned leads and today’s follow-ups.'}
+          </p>
+          <p className="dash-top__modules">Active: {moduleLabel}</p>
+        </div>
+        <div className="dash-top__tools">
+          <span className="dash-chip dash-chip--on">Live</span>
+          <span className="dash-chip">Last 7 days</span>
+          <button
+            type="button"
+            className="dash-refresh"
+            onClick={() => load({ soft: true })}
+            disabled={refreshing}
+            aria-label="Refresh dashboard"
+            title="Refresh"
+          >
+            {refreshing ? '…' : '↻'}
+          </button>
+          <Link
+            to={hasLeads ? '/leads' : '/calls'}
+            className="btn-primary text-sm px-3 py-2 no-underline"
+          >
+            {hasLeads ? 'Open leads' : 'Open calls'}
+          </Link>
+        </div>
+      </header>
 
-      <div className="signal-band card mb-6">
-        <div className="signal-band__item">
-          <span className="signal-band__label">Pipeline velocity</span>
-          <strong>{data.conversionRate ?? 0}%</strong>
-          <small>conversion rate</small>
+      {openActions.length > 0 && (
+      <section className="dash-actions" aria-label="Open work">
+        <div className="dash-actions__head">
+          <h2>Open work</h2>
+          <p>What needs attention right now</p>
         </div>
-        <div className="signal-band__item">
-          <span className="signal-band__label">Intake (7d)</span>
-          <strong>{(data.leadsLast7Days || []).reduce((s, d) => s + (d.count || 0), 0)}</strong>
-          <small>new leads</small>
+        <div className="dash-actions__grid">
+          {openActions.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`dash-action dash-action--${item.tone}`}
+              onClick={() => navigate(item.to)}
+            >
+              <span className="dash-action__value">{item.value}</span>
+              <span className="dash-action__label">{item.label}</span>
+              <span className="dash-action__hint">{item.hint}</span>
+            </button>
+          ))}
         </div>
-        <div className="signal-band__item">
-          <span className="signal-band__label">Follow-up radar</span>
-          <strong>{data.todayFollowUps ?? 0}</strong>
-          <small>due today</small>
-        </div>
-        <div className="signal-band__item signal-band__item--accent">
-          <span className="signal-band__label">Signal OS</span>
-          <strong>⌘K</strong>
-          <small>command palette</small>
-        </div>
-      </div>
+      </section>
+      )}
 
-      <div className="dashboard-stats grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        {statCards.map((card) => (
+      <section className="dash-kpi" aria-label="Key metrics">
+        {primaryStats.map((card) => (
           <StatCard key={card.title} {...card} />
         ))}
-      </div>
+      </section>
 
-      <div className="dashboard-charts grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
-        {trendData.length > 0 && (
-          <ChartCard title="New leads (7 days)" subtitle="Daily intake trend" className="md:col-span-2">
+      <section className="dash-grid">
+        {isAdmin && hasIvr && (
+          <ChartCard
+            title="Call desk"
+            subtitle={hasLeads ? 'Outbound outcomes on the lead timeline' : 'IVR call outcomes for your workspace'}
+            action={
+              <button type="button" className="dash-link" onClick={() => navigate('/calls')}>
+                Call history →
+              </button>
+            }
+          >
+            <div className="dash-call">
+              <div className="dash-call__stat dash-call__stat--ok">
+                <span>Connected</span>
+                <strong>{answered}</strong>
+                <small>{connectRate}%</small>
+              </div>
+              <div className="dash-call__stat dash-call__stat--miss">
+                <span>Missed</span>
+                <strong>{missed}</strong>
+                <small>{totalCalls ? 100 - connectRate : 0}%</small>
+              </div>
+              <div className="dash-call__stat">
+                <span>Total calls</span>
+                <strong>{totalCalls}</strong>
+                <small>all time in view</small>
+              </div>
+            </div>
+            {callData.length > 0 && (
+              <div className="dashboard-chart-h dashboard-chart-h--pie mt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={callData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius="70%">
+                      {callData.map((_, i) => (
+                        <Cell key={i} fill={CALL_COLORS[i % CALL_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={tip.contentStyle} labelStyle={tip.labelStyle} itemStyle={tip.itemStyle} wrapperStyle={tip.wrapperStyle} cursor={hoverCursor} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </ChartCard>
+        )}
+
+        {hasLeads && (
+        <ChartCard
+          title="Pipeline"
+          subtitle={`${statusTotal} leads in stages`}
+          className={isAdmin && hasIvr ? '' : 'dash-panel--span'}
+          action={
+            <button type="button" className="dash-link" onClick={() => navigate('/leads')}>
+              Lead list →
+            </button>
+          }
+        >
+          <PipelineBars
+            rows={statusData}
+            total={statusTotal || data.totalLeads || 1}
+            onOpen={(status) => navigate(`/leads?status=${status}`)}
+          />
+        </ChartCard>
+        )}
+
+        {hasLeads && (
+        <ChartCard title="Intake" subtitle={`${intake7d} new leads in 7 days`} className="dash-panel--span">
+          {trendData.length > 0 ? (
             <div className="dashboard-chart-h">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 10, fill: chartTick }} interval="preserveStartEnd" />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: chartTick }} width={32} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tip.contentStyle} labelStyle={tip.labelStyle} itemStyle={tip.itemStyle} wrapperStyle={tip.wrapperStyle} cursor={hoverCursor} />
                   <Line
                     type="monotone"
                     dataKey="count"
                     name="Leads"
-                    stroke="#3b82f6"
+                    stroke="#c9a227"
                     strokeWidth={2.5}
-                    dot={{ r: 4, fill: '#3b82f6' }}
-                    activeDot={{ r: 6 }}
+                    dot={{ r: 3, fill: '#c9a227' }}
+                    activeDot={{ r: 5 }}
                   />
                 </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="dash-empty">No intake in the last 7 days</p>
+          )}
+        </ChartCard>
+        )}
+
+        {hasLeads && sourceData.length > 0 && (
+          <ChartCard title="Lead sources" subtitle="Tap a slice to filter">
+            <div className="dashboard-chart-h dashboard-chart-h--pie">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={sourceData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="42%"
+                    outerRadius="70%"
+                    paddingAngle={2}
+                    onClick={(_, index) => {
+                      const slice = sourceData[index];
+                      if (slice?.source) navigate(`/leads?source=${slice.source}`);
+                    }}
+                  >
+                    {sourceData.map((_, i) => (
+                      <Cell key={i} fill={SOURCE_COLORS[i % SOURCE_COLORS.length]} className="cursor-pointer" />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={tip.contentStyle} labelStyle={tip.labelStyle} itemStyle={tip.itemStyle} wrapperStyle={tip.wrapperStyle} cursor={hoverCursor} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                </PieChart>
               </ResponsiveContainer>
             </div>
           </ChartCard>
         )}
 
-        {statusData.length > 0 && (
-          <ChartCard title="Leads by status" subtitle="Tap a bar to filter">
+        {hasLeads && statusData.length > 0 && (
+          <ChartCard title="Status mix" subtitle="Tap a bar to open that stage">
             <div className="dashboard-chart-h dashboard-chart-h--scroll">
               <ResponsiveContainer width="100%" height="100%" minWidth={Math.max(280, statusData.length * 56)}>
                 <BarChart data={statusData} margin={{ top: 8, right: 8, left: -12, bottom: 48 }}>
@@ -205,7 +462,7 @@ export default function Dashboard() {
                     height={56}
                   />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: chartTick }} width={28} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tip.contentStyle} labelStyle={tip.labelStyle} itemStyle={tip.itemStyle} wrapperStyle={tip.wrapperStyle} cursor={hoverCursor} />
                   <Bar
                     dataKey="value"
                     name="Leads"
@@ -226,84 +483,25 @@ export default function Dashboard() {
           </ChartCard>
         )}
 
-        {sourceData.length > 0 && (
-          <ChartCard title="Leads by source" subtitle="Tap slice to filter">
-            <div className="dashboard-chart-h dashboard-chart-h--pie">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sourceData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius="45%"
-                    outerRadius="72%"
-                    paddingAngle={2}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                    onClick={(_, index) => {
-                      const slice = sourceData[index];
-                      if (slice?.source) navigate(`/leads?source=${slice.source}`);
-                    }}
-                  >
-                    {sourceData.map((_, i) => (
-                      <Cell key={i} fill={SOURCE_COLORS[i % SOURCE_COLORS.length]} className="cursor-pointer" />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-        )}
-
-        {isAdmin && callData.length > 0 && (
-          <ChartCard title="Call outcomes" subtitle="Answered vs missed">
-            <div className="dashboard-chart-h dashboard-chart-h--pie">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={callData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius="72%" label>
-                    {callData.map((_, i) => (
-                      <Cell key={i} fill={CALL_COLORS[i % CALL_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <button
-              type="button"
-              className="text-xs text-primary-500 mt-3 hover:underline"
-              onClick={() => navigate('/calls')}
-            >
-              View call history →
-            </button>
-          </ChartCard>
-        )}
-
-        {isAdmin && data.employeePerformance?.length > 0 && (
-          <div className="md:col-span-2">
+        {hasLeads && isAdmin && data.employeePerformance?.length > 0 && (
+          <div className="dash-panel--span">
             <EmployeePerformanceChart
               data={data.employeePerformance}
               chartTick={chartTick}
-              tooltipStyle={tooltipStyle}
+              tooltipStyle={tip}
+              isDark={isDark}
             />
           </div>
         )}
 
-        {isAdmin && (
-          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-            <Link
-              to="/reports?tab=campaigns"
-              className="dashboard-chart-card card block hover:border-primary-500/40 transition-all no-underline"
-            >
-              <h2 className="dashboard-chart-title">Ad campaign leads</h2>
-              <p className="dashboard-chart-sub mb-4">Google Ads & Meta</p>
+        {hasLeads && isAdmin && (
+          <div className="dash-panel--span dash-split">
+            <Link to="/reports?tab=campaigns" className="dash-panel dash-panel--link no-underline">
+              <h2 className="dash-panel__title">Ad campaigns</h2>
+              <p className="dash-panel__sub mb-3">Google Ads & Meta intake</p>
               {data.campaignBreakdown?.length > 0 ? (
-                <div className="overflow-x-auto -mx-1">
-                  <table className="w-full text-sm min-w-[200px]">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
                     <thead>
                       <tr className="table-head">
                         <th className="text-left py-2">Campaign</th>
@@ -321,33 +519,27 @@ export default function Dashboard() {
                   </table>
                 </div>
               ) : (
-                <p className="text-sm text-muted py-8 text-center">No campaign leads yet</p>
+                <p className="dash-empty">No campaign leads yet</p>
               )}
             </Link>
 
-            <Link
-              to="/leads?source=MANUAL"
-              className="dashboard-chart-card card block hover:border-amber-500/30 transition-all no-underline flex flex-col"
-            >
-              <h2 className="dashboard-chart-title">Manual / import</h2>
-              <p className="dashboard-chart-sub mb-4">Not from ads</p>
-              <div className="flex-1 flex flex-col items-center justify-center py-6">
-                <p className="text-4xl sm:text-5xl font-bold text-amber-500 tabular-nums">
-                  {data.nonCampaignLeadsCount ?? 0}
-                </p>
-                <p className="text-sm text-muted mt-2">leads</p>
-              </div>
-              <p className="text-xs text-primary-500 text-center mt-auto">View manual leads →</p>
+            <Link to="/leads?source=MANUAL" className="dash-panel dash-panel--link no-underline">
+              <h2 className="dash-panel__title">Manual / import</h2>
+              <p className="dash-panel__sub mb-3">Not from ads</p>
+              <p className="dash-big-num">{data.nonCampaignLeadsCount ?? 0}</p>
+              <p className="text-xs text-muted text-center mt-2">View these leads →</p>
             </Link>
           </div>
         )}
-      </div>
+      </section>
 
       {showEnterpriseAdvisor && (
         <EnterpriseAIAdvisor data={data} followUps={followUps} employees={employees} />
       )}
 
-      <DashboardActionDock data={data} isAdmin={isAdmin} />
+      {isAdmin && canAI && <AiAdvisorChat />}
+
+      <DashboardActionDock data={data} isAdmin={isAdmin} hasLeads={hasLeads} hasIvr={hasIvr} />
     </div>
   );
 }

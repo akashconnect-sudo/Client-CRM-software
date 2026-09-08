@@ -9,7 +9,8 @@ import {
   hasSuperAdminInCompany,
 } from '../services/companyService.js';
 import { signPaymentToken } from '../services/billingService.js';
-import { getPlan } from '../constants/plans.js';
+import { getPlan, computePrepaidTotal, formatInr } from '../constants/plans.js';
+import { parseSignupEntitlement } from '../services/subscriptionService.js';
 import { toSafeUser, userSelectWithCompany } from '../utils/tenant.js';
 import {
   getOAuthStartUrl,
@@ -188,6 +189,12 @@ export const register = asyncHandler(async (req, res) => {
     role,
     companyName,
     plan,
+    modules,
+    tier,
+    billingCycleMonths,
+    extraSeats,
+    seatCount,
+    desiredSeats,
     createWorkspace,
     emailVerifyToken,
     phoneVerifyToken,
@@ -213,7 +220,8 @@ export const register = asyncHandler(async (req, res) => {
   assertPhoneVerifyToken(phoneVerifyToken, phoneNorm);
   assertPassword(password);
   const existingCompany = companyName ? await resolveCompanyForExistingWorkspace(companyName) : null;
-  const isCreatingWorkspace = createWorkspace === true || Boolean(plan);
+  const isCreatingWorkspace =
+    createWorkspace === true || Boolean(plan) || Boolean(modules) || Boolean(tier);
 
   if (isCreatingWorkspace) {
     if (!companyName) {
@@ -231,10 +239,25 @@ export const register = asyncHandler(async (req, res) => {
       });
     }
 
-    const selectedPlan = plan && getPlan(plan) ? plan : 'STARTER';
+    const selectedPlan = plan && getPlan(plan) ? plan : tier || 'STARTER';
+    const entitlement = parseSignupEntitlement({
+      plan: selectedPlan,
+      modules,
+      tier: tier || selectedPlan,
+      billingCycleMonths,
+      extraSeats,
+      seatCount,
+      desiredSeats,
+    });
+    const pricing = computePrepaidTotal(entitlement);
     const company = await createCompany({
       name: companyName,
-      plan: selectedPlan,
+      plan: entitlement.tier,
+      modules: entitlement.modules,
+      tier: entitlement.tier,
+      billingCycleMonths: entitlement.billingCycleMonths,
+      seatCount: entitlement.seatCount,
+      extraSeats: entitlement.extraSeats,
       contactEmail: emailLower,
       contactPhone: phoneNorm,
     });
@@ -251,23 +274,39 @@ export const register = asyncHandler(async (req, res) => {
         department: 'Management',
         status: 'ACTIVE',
       },
-      include: { company: true },
+      select: userSelectWithCompany(),
     });
 
-    if (!hasWorkspaceAccess(company)) {
+    if (!hasWorkspaceAccess({ ...company, subscription: user.company?.subscription })) {
       const paymentToken = signPaymentToken({
         companyId: company.id,
         email: emailLower,
-        plan: company.plan,
+        plan: entitlement.tier,
+        modules: entitlement.modules,
+        tier: entitlement.tier,
+        billingCycleMonths: entitlement.billingCycleMonths,
+        seatCount: entitlement.seatCount,
       });
+      const planBase = getPlan(entitlement.tier);
       return res.status(201).json({
         success: true,
         message: 'Account created. Complete payment to start using the CRM.',
         data: {
           needsPayment: true,
           paymentToken,
-          plan: company.plan,
-          planDetails: getPlan(company.plan),
+          plan: entitlement.tier,
+          modules: entitlement.modules,
+          tier: entitlement.tier,
+          billingCycleMonths: entitlement.billingCycleMonths,
+          seatCount: entitlement.seatCount,
+          extraSeats: entitlement.extraSeats,
+          planDetails: {
+            ...planBase,
+            prepaidTotal: pricing.total,
+            priceLabel: formatInr(pricing.total),
+            period: ` / ${pricing.months} mo`,
+            name: `${pricing.packageKey} · ${pricing.seatCount} seats`,
+          },
           companyId: company.id,
           user: toSafeUser(user),
         },

@@ -39,8 +39,9 @@ https://sales-crm-ipi.vercel.app/login
 | Database | PostgreSQL |
 | ORM | Prisma |
 | Authentication | JWT |
-| Deployment | Vercel |
+| Deployment | Vercel (app) + optional GPU host for AI |
 | Database Hosting | Neon PostgreSQL |
+| AI (optional) | Self-hosted on RunPod/EC2 — see [`ai-inference/README.md`](ai-inference/README.md) |
 
 ## Project Structure
 

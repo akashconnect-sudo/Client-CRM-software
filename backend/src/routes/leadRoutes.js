@@ -12,10 +12,11 @@ import {
   addFollowUp,
 } from '../controllers/leadController.js';
 import { authenticate, authorize, scopeToEmployee } from '../middleware/auth.js';
+import { requireModuleFeature } from '../middleware/moduleGate.js';
 
 const router = Router();
 
-router.use(authenticate, scopeToEmployee);
+router.use(authenticate, scopeToEmployee, requireModuleFeature('leads'));
 
 router.get('/', listLeads);
 router.post('/', authorize('SUPER_ADMIN', 'MANAGER'), createLead);

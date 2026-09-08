@@ -5,10 +5,11 @@ import {
   followUpDashboard,
 } from '../controllers/followUpController.js';
 import { authenticate, scopeToEmployee } from '../middleware/auth.js';
+import { requireModuleFeature } from '../middleware/moduleGate.js';
 
 const router = Router();
 
-router.use(authenticate, scopeToEmployee);
+router.use(authenticate, scopeToEmployee, requireModuleFeature('follow-ups'));
 
 router.get('/', listFollowUps);
 router.get('/dashboard', followUpDashboard);

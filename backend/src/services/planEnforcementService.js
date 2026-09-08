@@ -4,9 +4,19 @@ import { getPlanLimits } from '../constants/planLimits.js';
 export async function getCompanyPlan(companyId) {
   const company = await prisma.company.findUnique({
     where: { id: companyId },
-    select: { plan: true },
+    select: { plan: true, subscription: { select: { tier: true, seatCount: true, extraSeats: true } } },
   });
-  return company?.plan || 'STARTER';
+  return company?.subscription?.tier || company?.plan || 'STARTER';
+}
+
+export async function getCompanySeatCount(companyId) {
+  const sub = await prisma.workspaceSubscription.findUnique({
+    where: { companyId },
+    select: { seatCount: true, extraSeats: true },
+  });
+  if (!sub) return 1;
+  if (sub.seatCount != null && sub.seatCount >= 1) return sub.seatCount;
+  return Math.max(1, 1 + (sub.extraSeats || 0));
 }
 
 export async function countCompanyUsers(companyId) {
@@ -21,14 +31,14 @@ export async function countCompanyManagers(companyId) {
   return prisma.user.count({ where: { companyId, role: 'MANAGER' } });
 }
 
-/** @returns {{ ok: boolean, remaining: number, current: number, max: number|null, plan: string }} */
 export async function checkUserSeatAvailability(companyId, planId, additional = 1) {
   const plan = planId || (await getCompanyPlan(companyId));
-  const limits = getPlanLimits(plan);
+  const seatCount = await getCompanySeatCount(companyId);
+  const limits = getPlanLimits(plan, { seatCount });
   const current = await countCompanyUsers(companyId);
 
   if (limits.maxUsers == null) {
-    return { ok: true, remaining: Infinity, current, max: null, plan };
+    return { ok: true, remaining: Infinity, current, max: null, plan, seatCount };
   }
 
   const remaining = Math.max(0, limits.maxUsers - current);
@@ -38,6 +48,8 @@ export async function checkUserSeatAvailability(companyId, planId, additional = 
     current,
     max: limits.maxUsers,
     plan,
+    seatCount,
+    extraSeats: Math.max(0, seatCount - 1),
   };
 }
 
@@ -60,7 +72,6 @@ export async function checkLeadCapacity(companyId, planId, additional = 1) {
   };
 }
 
-/** Check manager seat availability per plan */
 export async function checkManagerAvailability(companyId, planId, additional = 1) {
   const plan = planId || (await getCompanyPlan(companyId));
   const limits = getPlanLimits(plan);

@@ -159,7 +159,16 @@ export default function EnterpriseAIAdvisor({ data = {}, followUps = [], employe
       </header>
 
       <div className="advisor-pulse-row">
-        <HealthRing score={state.healthScore} label={state.healthLabel} />
+        <div className="advisor-health">
+          <HealthRing score={state.healthScore} label={state.healthLabel} />
+          <p className="advisor-health-help">
+            <strong>Health {state.healthScore}/100</strong> — pipeline fitness score
+            (follow-ups, conversion, and call outcomes). Not lead count.
+            {state.healthLabel === 'Watch' && ' Needs attention this week.'}
+            {state.healthLabel === 'Critical' && ' Fix overdue work first.'}
+            {state.healthLabel === 'Stable' && ' Floor is in good shape.'}
+          </p>
+        </div>
         <div className="advisor-pulse-meta">
           <div className="advisor-pulse-top">
             <span className="advisor-pulse-title">7-day intake pulse</span>

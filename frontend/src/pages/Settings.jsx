@@ -12,6 +12,9 @@ import { playNotificationSound } from '../utils/notificationSound';
 import SubscriptionCard from '../components/settings/SubscriptionCard';
 import AccountProfileCard from '../components/settings/AccountProfileCard';
 import TeamNoticeCard from '../components/settings/TeamNoticeCard';
+import IvrConnectionCard from '../components/settings/IvrConnectionCard';
+import SeatTopUpCard from '../components/settings/SeatTopUpCard';
+import { FEATURE_UNLOCK_HINT } from '../constants/workspaceNav';
 
 const FIELDS = [
   { key: 'google_webhook_secret', label: 'Google Ads Webhook Secret', hint: 'Header: x-webhook-secret' },
@@ -72,7 +75,8 @@ export default function Settings() {
 
   useEffect(() => {
     const focus = searchParams.get('focus');
-    if (focus !== 'subscription') return;
+    const unlock = searchParams.get('unlock');
+    if (focus !== 'subscription' && !unlock) return;
     subscriptionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     const timer = setTimeout(() => {
       const next = new URLSearchParams(searchParams);
@@ -127,10 +131,24 @@ export default function Settings() {
     <div className="page-enter settings-page w-full max-w-5xl mx-auto">
       <h1 className="text-xl sm:text-2xl font-bold text-main mb-6 sm:mb-8 tracking-tight">Settings</h1>
 
+      {searchParams.get('unlock') ? (
+        <div className="alert-info mb-4">
+          {FEATURE_UNLOCK_HINT[searchParams.get('unlock')]?.title || 'This module'} needs{' '}
+          {FEATURE_UNLOCK_HINT[searchParams.get('unlock')]?.need || 'a plan upgrade'}. Change modules or tier below.
+        </div>
+      ) : null}
+
       <div ref={subscriptionRef} className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2 mb-6 sm:mb-8">
         <SubscriptionCard />
         <AccountProfileCard />
       </div>
+
+      {isSuperAdmin && (
+        <div className="mb-6 sm:mb-8 grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
+          <IvrConnectionCard />
+          <SeatTopUpCard />
+        </div>
+      )}
 
       {isSuperAdmin && <TeamNoticeCard />}
 

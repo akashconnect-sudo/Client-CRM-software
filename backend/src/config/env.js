@@ -66,6 +66,7 @@ export const env = {
   metaWebhookSecret: process.env.META_WEBHOOK_SECRET || '',
   ivrWebhookSecret: process.env.IVR_WEBHOOK_SECRET || '',
   connectWebhookSecret: cleanEnv(process.env.CONNECT_WEBHOOK_SECRET, ''),
+  ivrSecretsKey: cleanEnv(process.env.IVR_SECRETS_KEY, ''),
   gstVerificationMode: cleanEnv(process.env.GST_VERIFICATION_MODE, 'mock').toLowerCase(),
   gstApiKey: cleanEnv(process.env.GST_API_KEY, ''),
   gstApiUrl: cleanEnv(process.env.GST_API_URL, ''),
@@ -102,6 +103,12 @@ export const env = {
   microsoftTenantId: cleanEnv(process.env.MICROSOFT_TENANT_ID, 'common'),
   githubClientId: cleanEnv(process.env.GITHUB_CLIENT_ID, ''),
   githubClientSecret: cleanEnv(process.env.GITHUB_CLIENT_SECRET, ''),
+  /** Private GPU ai-inference base URL (never public). Example: http://10.0.1.20:8080 */
+  aiInferenceUrl: cleanEnv(process.env.AI_INFERENCE_URL, ''),
+  /** Shared secret header for CRM ↔ ai-inference */
+  aiInternalSecret: cleanEnv(process.env.AI_INTERNAL_SECRET, ''),
+  aiChatModel: cleanEnv(process.env.AI_CHAT_MODEL, 'llama-3.1-8b-instruct'),
+  aiEmbedModel: cleanEnv(process.env.AI_EMBED_MODEL, 'bge-small-en'),
 };
 
 export function apiPublicUrl(req) {

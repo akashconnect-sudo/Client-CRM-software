@@ -23,7 +23,7 @@ export default function AuthFormPanel({ children, showBrandText = true }) {
               <p className="auth-form-brand-name">Sales Lead CRM</p>
               <p className="auth-form-brand-tag">
                 <span className="auth-form-brand-dot" aria-hidden />
-                Secure workspace · Plans from ₹1,299/mo
+                Secure workspace · Pay per person
               </p>
             </div>
           )}

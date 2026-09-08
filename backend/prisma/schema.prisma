@@ -80,6 +80,28 @@ enum NotificationType {
   DUPLICATE_LEAD
   ADMIN_NOTICE
   REPORT_SHARED
+  AI_JOB_DONE
+}
+
+enum AiJobType {
+  CALL_ANALYSIS
+  PULSE_REASONING
+  FOLLOWUP_DRAFT
+  ADVISOR_CHAT
+  INDEX_DOC
+}
+
+enum AiJobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum SentimentLabel {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
 }
 
 enum ActivityType {
@@ -115,6 +137,9 @@ model Company {
   settings            Setting[]
   leadAssignmentState LeadAssignmentState?
   webhookLogs         WebhookLog[]
+  subscription        WorkspaceSubscription?
+  ivrIntegration      IVRIntegration?
+  aiJobs              AiJob[]
 
   @@map("companies")
 }
@@ -142,6 +167,7 @@ model User {
   followUps     FollowUp[]
   notes         Note[]
   notifications Notification[]
+  aiJobs        AiJob[]
 
   @@unique([companyId, email])
   @@unique([companyId, oauthProvider, oauthSubject])
@@ -167,6 +193,7 @@ model Lead {
   assignedToId     String?    @map("assigned_to_id")
   followUpDate     DateTime?  @map("follow_up_date")
   remarks          String?
+  pulseReasoning   String?    @map("pulse_reasoning")
   createdAt        DateTime   @default(now()) @map("created_at")
   updatedAt        DateTime   @updatedAt @map("updated_at")
 
@@ -178,6 +205,7 @@ model Lead {
   activities   LeadActivity[]
   campaign     Campaign?      @relation(fields: [campaignId], references: [id])
   campaignId   String?        @map("campaign_id")
+  aiJobs       AiJob[]
 
   @@unique([companyId, leadNumber])
   @@index([companyId, phone])
@@ -217,20 +245,101 @@ model CallLog {
   callStartTime     DateTime   @map("call_start_time")
   callEndTime       DateTime?  @map("call_end_time")
   durationSeconds   Int        @default(0) @map("duration_seconds")
-  recordingUrl      String?    @map("recording_url")
-  ivrProviderCallId String?    @map("ivr_provider_call_id")
+  recordingUrl      String?         @map("recording_url")
+  transcript        String?
+  summary           String?
+  sentimentLabel    SentimentLabel? @map("sentiment_label")
+  sentimentScore    Float?          @map("sentiment_score")
+  ivrProviderCallId String?         @map("ivr_provider_call_id")
+  sourceMode        String?         @map("source_mode") // NATIVE_IVR | EXTERNAL_IVR
+  provider          String? // AMAZON_CONNECT | EXOTEL | etc.
+  externalCallId    String?         @map("external_call_id")
   notes             String?
-  isLinked          Boolean    @default(true) @map("is_linked")
-  createdAt         DateTime   @default(now()) @map("created_at")
+  isLinked          Boolean         @default(true) @map("is_linked")
+  createdAt         DateTime        @default(now()) @map("created_at")
 
   company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   lead     Lead?   @relation(fields: [leadId], references: [id])
   employee User?   @relation(fields: [employeeId], references: [id])
+  aiJobs   AiJob[]
 
   @@index([companyId, customerPhone])
   @@index([companyId, employeeId])
   @@index([companyId, leadId])
+  @@index([companyId, externalCallId])
   @@map("call_logs")
+}
+
+/// Async queue for LangChain / transcription work (too slow for Vercel request limits).
+model AiJob {
+  id          String      @id @default(uuid())
+  companyId   String      @map("company_id")
+  type        AiJobType
+  status      AiJobStatus @default(PENDING)
+  payload     Json
+  result      Json?
+  error       String?
+  leadId      String?     @map("lead_id")
+  callLogId   String?     @map("call_log_id")
+  requestedBy String?     @map("requested_by")
+  startedAt   DateTime?   @map("started_at")
+  completedAt DateTime?   @map("completed_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  callLog   CallLog? @relation(fields: [callLogId], references: [id], onDelete: SetNull)
+  requester User?    @relation(fields: [requestedBy], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([companyId, type])
+  @@index([callLogId])
+  @@index([leadId])
+  @@map("ai_jobs")
+}
+
+model WorkspaceSubscription {
+  id                   String   @id @default(uuid())
+  companyId            String   @unique @map("company_id")
+  modules              String[] // LEADS, IVR
+  tier                 String // STARTER | PROFESSIONAL | ENTERPRISE
+  billingCycleMonths   Int      @default(3) @map("billing_cycle_months")
+  pricePerMonth        Decimal  @default(0) @map("price_per_month") @db.Decimal(12, 2)
+  // Purchased seats beyond tier included cap (legacy; prefer seatCount)
+  extraSeats           Int      @default(0) @map("extra_seats")
+  // Billable seat allotment (per-user pricing). Invoice uses this count.
+  seatCount            Int      @default(1) @map("seat_count")
+  startedAt            DateTime @default(now()) @map("started_at")
+  renewsAt             DateTime @map("renews_at")
+  status               String   @default("TRIAL") // TRIAL | ACTIVE | PAST_DUE | CANCELLED
+  razorpayPaymentId    String?  @map("razorpay_payment_id")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("workspace_subscriptions")
+}
+
+model IVRIntegration {
+  id            String    @id @default(uuid())
+  companyId     String    @unique @map("company_id")
+  mode          String // NATIVE | EXTERNAL
+  provider      String? // AMAZON_CONNECT | EXOTEL | KNOWLARITY | OZONETEL | MYOPERATOR | OTHER
+  apiKey        String?   @map("api_key")
+  apiSecret     String?   @map("api_secret")
+  instanceId    String?   @map("instance_id")
+  webhookSecret String    @map("webhook_secret")
+  status        String    @default("PENDING_VERIFICATION") // PENDING_VERIFICATION | CONNECTED | ERROR
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  lastError     String?   @map("last_error")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("ivr_integrations")
 }
 
 model FollowUp {

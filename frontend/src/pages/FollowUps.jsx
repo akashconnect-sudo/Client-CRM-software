@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { getApiErrorMessage } from '../utils/apiError';
 import { formatDate } from '../utils/constants';
+import { userCanAccessAI } from '../utils/planAccess';
 
 function followUpUrgency(scheduledAt, tab) {
   if (tab === 'missed') return { label: 'Overdue', className: 'urgency urgency--critical' };
@@ -24,7 +25,8 @@ const TABS = [
 
 export default function FollowUps() {
   try {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
+  const canAI = userCanAccessAI(user);
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const type = searchParams.get('type') || 'today';
@@ -125,7 +127,17 @@ export default function FollowUps() {
                   {f.remarks && <p className="text-sm mt-1">{f.remarks}</p>}
                   {isAdmin && <p className="text-xs text-subtle">Employee: {f.employee?.name}</p>}
                 </div>
-                <button className="btn-primary text-sm" onClick={() => complete(f.id)}>Mark Complete</button>
+                <div className="flex items-center gap-2">
+                  {canAI && (
+                    <Link
+                      to={`/leads/${f.lead.id}?suggest=1`}
+                      className="btn-secondary text-sm no-underline"
+                    >
+                      Suggest message
+                    </Link>
+                  )}
+                  <button className="btn-primary text-sm" onClick={() => complete(f.id)}>Mark Complete</button>
+                </div>
               </div>
             );})}
           </div>

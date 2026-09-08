@@ -6,17 +6,17 @@ const CAPABILITIES = [
   {
     n: '01',
     title: 'Capture every lead',
-    desc: 'Google Ads, Meta, imports — one intake layer.',
+    desc: 'Import, manual entry, or webhooks — one Lead Vault.',
   },
   {
     n: '02',
-    title: 'Route with intent',
-    desc: 'Round-robin or manager assignment, no leakage.',
+    title: 'Call with IVR',
+    desc: 'Click-to-call from the profile; recordings stay on the timeline.',
   },
   {
     n: '03',
     title: 'Close the loop',
-    desc: 'IVR logs, follow-ups, and performance in sync.',
+    desc: 'Follow-up Radar and reports keep the floor disciplined.',
   },
 ];
 
@@ -29,7 +29,7 @@ export default function AuthMarketingPanel({ onGetStarted }) {
       <div className="auth-brand-inner">
         <header className="auth-brand-header flex flex-col gap-4">
           <BrandLogo size="lg" />
-          <span className="auth-brand-tag">Sales CRM · Plans from ₹1,299/mo</span>
+          <span className="auth-brand-tag">CRM + IVR · Pay per person</span>
         </header>
 
         <div className="auth-brand-main">

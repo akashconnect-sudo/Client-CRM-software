@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { billingApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { openRazorpayCheckout } from '../../utils/razorpayCheckout';
+import { formatInr } from '../../constants/modularPricing';
 
 export default function SubscriptionCard() {
   const { user, isSuperAdmin, setSessionFromToken } = useAuth();
@@ -55,7 +56,13 @@ export default function SubscriptionCard() {
     setMessage('');
     setError('');
     try {
-      const res = await billingApi.checkout({ plan: selectedPlanId });
+      const res = await billingApi.checkout({
+        plan: selectedPlanId,
+        tier: selectedPlanId,
+        modules: sub?.modules || user?.modules || ['LEADS', 'IVR'],
+        billingCycleMonths: sub?.billingCycleMonths || 6,
+        seatCount: sub?.seatCount || 1,
+      });
       const session = res.data.data;
       if (session?.provider !== 'razorpay') {
         throw new Error('Real payment gateway is not configured');
@@ -63,6 +70,10 @@ export default function SubscriptionCard() {
       const payment = await openRazorpayCheckout(session);
       await billingApi.confirmPayment({
         plan: selectedPlanId,
+        tier: selectedPlanId,
+        modules: sub?.modules || user?.modules || ['LEADS', 'IVR'],
+        billingCycleMonths: sub?.billingCycleMonths || 6,
+        seatCount: sub?.seatCount || 1,
         razorpayOrderId: payment.razorpay_order_id,
         razorpayPaymentId: payment.razorpay_payment_id,
         razorpaySignature: payment.razorpay_signature,
@@ -117,6 +128,31 @@ export default function SubscriptionCard() {
             {planInfo?.priceLabel ? ` — ${planInfo.priceLabel}${planInfo.period || ''}` : ''}
           </span>
         </div>
+        <div className="profile-field-block">
+          <span className="profile-label">Modules</span>
+          <span className="profile-value">
+            {(sub?.modules || user?.modules || []).join(' · ') || '—'}
+            {sub?.billingCycleMonths ? ` · ${sub.billingCycleMonths} mo` : ''}
+          </span>
+        </div>
+        <div className="profile-field-block">
+          <span className="profile-label">Seats</span>
+          <span className="profile-value">
+            {sub?.seatCount || sub?.effectiveSeats || '—'} billable
+            {sub?.pricePerUserPerMonth
+              ? ` · ${formatInr(sub.pricePerUserPerMonth)}/user/mo`
+              : ''}
+            {sub?.seatCap != null ? ` · cap ${sub.seatCap}` : ' · no cap'}
+          </span>
+        </div>
+        {sub?.ivrIntegration && (
+          <div className="profile-field-block">
+            <span className="profile-label">IVR</span>
+            <span className="profile-value">
+              {sub.ivrIntegration.mode} · {sub.ivrIntegration.provider || '—'} · {sub.ivrIntegration.status}
+            </span>
+          </div>
+        )}
       </div>
 
       {message && <div className="alert-success mb-4">{message}</div>}

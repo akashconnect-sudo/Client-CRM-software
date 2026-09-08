@@ -1,9 +1,28 @@
 import { useState } from 'react';
 import { billingApi } from '../../api';
 import { openRazorpayCheckout } from '../../utils/razorpayCheckout';
+import { formatInr } from '../../constants/modularPricing';
 
-export default function PaymentStep({ paymentToken, planDetails, onSuccess, onError }) {
+export default function PaymentStep({
+  paymentToken,
+  planDetails,
+  modules,
+  tier,
+  billingCycleMonths,
+  seatCount,
+  extraSeats,
+  onSuccess,
+  onError,
+}) {
   const [loading, setLoading] = useState(false);
+
+  const entitlement = {
+    plan: tier || planDetails?.id,
+    modules,
+    tier: tier || planDetails?.id,
+    billingCycleMonths,
+    seatCount: seatCount || extraSeats || 1,
+  };
 
   const pay = async () => {
     setLoading(true);
@@ -11,9 +30,9 @@ export default function PaymentStep({ paymentToken, planDetails, onSuccess, onEr
     try {
       let res;
       if (paymentToken) {
-        res = await billingApi.checkoutPublic({ paymentToken, plan: planDetails?.id });
+        res = await billingApi.checkoutPublic({ paymentToken, ...entitlement });
       } else {
-        res = await billingApi.checkout({ plan: planDetails?.id });
+        res = await billingApi.checkout(entitlement);
       }
 
       const session = res.data.data;
@@ -25,7 +44,7 @@ export default function PaymentStep({ paymentToken, planDetails, onSuccess, onEr
 
       const confirmRes = await billingApi.confirmPayment({
         paymentToken,
-        plan: planDetails?.id,
+        ...entitlement,
         razorpayOrderId: payment.razorpay_order_id,
         razorpayPaymentId: payment.razorpay_payment_id,
         razorpaySignature: payment.razorpay_signature,
@@ -43,21 +62,40 @@ export default function PaymentStep({ paymentToken, planDetails, onSuccess, onEr
     }
   };
 
+  const totalLabel =
+    sessionTotalLabel(planDetails, billingCycleMonths) ||
+    planDetails?.priceLabel ||
+    '';
+
   return (
     <div className="payment-step">
       <div className="payment-step-head">
         <span className="payment-step-badge">Almost there</span>
         <h2 className="payment-step-title">Complete your payment</h2>
         <p className="payment-step-sub">
-          {planDetails?.name} plan — <strong>{planDetails?.priceLabel}{planDetails?.period}</strong>
+          {(modules || []).join(' + ') || planDetails?.name} · {tier || planDetails?.id}
+          {billingCycleMonths ? ` · ${billingCycleMonths} months` : ''}
+          {seatCount ? ` · ${seatCount} seats` : ''}
+          {totalLabel ? (
+            <>
+              {' — '}
+              <strong>{totalLabel}</strong>
+            </>
+          ) : null}
         </p>
       </div>
       <p className="text-sm text-muted mb-4">
-        Account activates only after successful real payment (UPI, card, netbanking, wallet).
+        Prepaid one-time Razorpay checkout (UPI, card, netbanking). Access renews when you pay again.
       </p>
       <button type="button" className="auth-submit" disabled={loading} onClick={pay}>
-        {loading ? 'Processing…' : `Pay ${planDetails?.priceLabel || ''} & Start CRM`}
+        {loading ? 'Processing…' : `Pay & activate`}
       </button>
     </div>
   );
+}
+
+function sessionTotalLabel(planDetails, months) {
+  if (planDetails?.prepaidTotal != null) return formatInr(planDetails.prepaidTotal);
+  if (planDetails?.price && months) return formatInr(planDetails.price * months);
+  return null;
 }

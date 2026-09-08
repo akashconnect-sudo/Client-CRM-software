@@ -1,20 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { canAccessFeature } from '../utils/planAccess';
+import { canAccessFeatureForUser } from '../utils/planAccess';
 
 const BASE_ACTIONS = [
   { id: 'dashboard', label: 'Go to Dashboard', path: '/dashboard', keys: ['home', 'dash'] },
-  { id: 'leads', label: 'Open Leads', path: '/leads', keys: ['lead', 'pipeline'] },
+  { id: 'leads', label: 'Open Customers', path: '/leads', keys: ['lead', 'pipeline', 'customer'] },
   { id: 'followups', label: 'Follow-ups', path: '/follow-ups', keys: ['task', 'today'] },
-  { id: 'new-lead', label: 'Create new lead', path: '/leads?action=new', keys: ['add', 'create'] },
+  { id: 'calendar', label: 'Calendar', path: '/calendar', keys: ['cal', 'schedule'] },
+  { id: 'interactions', label: 'Interactions', path: '/interactions', keys: ['timeline'] },
+  { id: 'gmail', label: 'Gmail Inbox', path: '/inbox/gmail', keys: ['google', 'inbox'] },
+  { id: 'rechurn', label: 'Rechurn Customers', path: '/rechurn', keys: ['lost', 'rechurn'] },
+  { id: 'whatsapp', label: 'WhatsApp templates', path: '/templates/whatsapp', keys: ['wa', 'template'] },
+  { id: 'new-lead', label: 'Create new customer', path: '/leads?action=new', keys: ['add', 'create'] },
 ];
 
 const ADMIN_ACTIONS = [
-  { id: 'employees', label: 'Team grid', path: '/employees', keys: ['team', 'staff'] },
-  { id: 'calls', label: 'Call history', path: '/calls', keys: ['ivr', 'phone'] },
-  { id: 'reports', label: 'Insight studio', path: '/reports', keys: ['analytics', 'export'] },
-  { id: 'settings', label: 'Control room', path: '/settings', keys: ['config', 'webhook'] },
+  { id: 'allocations', label: 'Allocations', path: '/allocations', keys: ['assign'] },
+  { id: 'employees', label: 'Team', path: '/employees', keys: ['team', 'staff'] },
+  { id: 'calls', label: 'Call Logs', path: '/calls', keys: ['ivr', 'phone'] },
+  { id: 'reports', label: 'Request Reports', path: '/reports', keys: ['export'] },
+  { id: 'analytics', label: 'Analytics', path: '/analytics', keys: ['analytics', 'charts'] },
+  { id: 'email', label: 'Email templates', path: '/templates/email', keys: ['email', 'template'] },
+  { id: 'settings', label: 'Settings', path: '/settings', keys: ['config', 'webhook'] },
 ];
 
 export default function CommandPalette() {
@@ -31,13 +39,22 @@ export default function CommandPalette() {
         dashboard: 'dashboard',
         leads: 'leads',
         followups: 'follow-ups',
+        calendar: 'calendar',
+        interactions: 'interactions',
+        gmail: 'gmailInbox',
+        rechurn: 'rechurn',
+        whatsapp: 'whatsappTemplates',
+        'new-lead': 'leads',
+        allocations: 'allocations',
         employees: 'employees',
-        calls: 'calls',
+        calls: 'callBridge',
         reports: 'reports',
+        analytics: 'analytics',
+        email: 'emailTemplates',
         settings: 'settings',
       };
       const feat = featureMap[a.id];
-      if (feat && !canAccessFeature(user?.plan, feat)) return false;
+      if (feat && !canAccessFeatureForUser(user, feat)) return false;
       return true;
     });
   }, [isAdmin, user?.plan]);

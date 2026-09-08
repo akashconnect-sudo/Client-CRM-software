@@ -28,6 +28,18 @@ export function userSelectWithCompany() {
         paidAt: true,
         trialEndsAt: true,
         status: true,
+        subscription: true,
+        ivrIntegration: {
+          select: {
+            id: true,
+            mode: true,
+            provider: true,
+            status: true,
+            instanceId: true,
+            lastSyncedAt: true,
+            lastError: true,
+          },
+        },
       },
     },
   };
@@ -36,11 +48,17 @@ export function userSelectWithCompany() {
 export function toSafeUser(user) {
   if (!user) return null;
   const { passwordHash, oauthProvider, oauthSubject, company, ...rest } = user;
+  const sub = company?.subscription;
   return {
     ...rest,
     companyName: company?.name,
     plan: company?.plan,
     subscriptionStatus: company?.subscriptionStatus,
+    modules: sub?.modules || (company?.plan === 'STARTER' ? ['LEADS'] : ['LEADS', 'IVR']),
+    tier: sub?.tier || company?.plan,
+    billingCycleMonths: sub?.billingCycleMonths || 3,
+    subscription: sub || null,
+    ivrIntegration: company?.ivrIntegration || null,
     company,
   };
 }

@@ -1,38 +1,56 @@
 import { useNavigate } from 'react-router-dom';
 
-export default function DashboardActionDock({ data, isAdmin }) {
+export default function DashboardActionDock({ data, isAdmin, hasLeads = true, hasIvr = false }) {
   const navigate = useNavigate();
 
   const actions = [
-    {
-      id: 'leads',
-      title: 'Pipeline',
-      desc: 'Full lead inventory with filters',
-      stat: data?.totalLeads ?? 0,
-      statLabel: 'total leads',
-      to: '/leads',
-      accent: 'blue',
-      primary: true,
-    },
-    {
-      id: 'followups',
-      title: "Today's follow-ups",
-      desc: 'Due touchpoints for today',
-      stat: data?.todayFollowUps ?? 0,
-      statLabel: 'due today',
-      to: '/follow-ups?type=today',
-      accent: 'amber',
-    },
-    ...(isAdmin
+    ...(hasLeads
+      ? [
+          {
+            id: 'leads',
+            title: 'Leads',
+            desc: 'Full pipeline with filters',
+            stat: data?.totalLeads ?? 0,
+            statLabel: 'total',
+            to: '/leads',
+            accent: 'blue',
+            primary: true,
+          },
+          {
+            id: 'followups',
+            title: 'Follow-ups',
+            desc: 'Due touchpoints today',
+            stat: data?.todayFollowUps ?? 0,
+            statLabel: 'due today',
+            to: '/follow-ups?type=today',
+            accent: 'amber',
+          },
+        ]
+      : []),
+    ...(hasIvr && isAdmin
+      ? [
+          {
+            id: 'calls',
+            title: 'Calls',
+            desc: 'IVR history & recordings',
+            stat: data?.totalCalls ?? 0,
+            statLabel: 'calls',
+            to: '/calls',
+            accent: 'violet',
+            primary: !hasLeads,
+          },
+        ]
+      : []),
+    ...(isAdmin && hasLeads
       ? [
           {
             id: 'reports',
-            title: 'Intelligence',
-            desc: 'Campaigns, conversions, exports',
+            title: 'Reports',
+            desc: 'Campaigns & conversions',
             stat:
-        data?.conversionRate != null
-          ? `${Number(data.conversionRate).toFixed(1)}%`
-          : '—',
+              data?.conversionRate != null
+                ? `${Number(data.conversionRate).toFixed(1)}%`
+                : '—',
             statLabel: 'conversion',
             to: '/reports',
             accent: 'violet',
@@ -41,9 +59,11 @@ export default function DashboardActionDock({ data, isAdmin }) {
       : []),
   ];
 
+  if (!actions.length) return null;
+
   return (
-    <nav className="dock" aria-label="Quick navigation">
-      <p className="dock-label">Command dock</p>
+    <nav className="dock" aria-label="Quick links">
+      <p className="dock-label">Quick links</p>
       <div className={`dock-grid dock-grid--${actions.length}`}>
         {actions.map((action) => (
           <button

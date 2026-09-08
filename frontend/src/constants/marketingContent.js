@@ -1,47 +1,67 @@
 export const TRIAL_DAYS = 10;
-export const TRIAL_HEADLINE = '10-day free trial - no credit card';
+export const TRIAL_HEADLINE = '10-day free trial · No credit card';
 
 export const MARKETING_STATS = [
+  { value: '1 desk', label: 'Leads, calls & follow-ups together' },
+  { value: 'IVR', label: 'Click-to-call on the lead profile' },
   { value: '10 days', label: 'Full workspace trial' },
-  { value: 'Flat Rs', label: 'Workspace pricing, not per seat' },
-  { value: '3x', label: 'Faster first response' },
-  { value: '24/7', label: 'Webhook lead intake' },
+  { value: 'Per user', label: 'Pay for the team you actually run' },
+];
+
+/** Home benefit pillars — real CRM outcomes (layout inspired by product sites, not copied) */
+export const HOME_BENEFITS = [
+  {
+    title: 'One pipeline the whole floor trusts',
+    text: 'Every lead — imported, manual, or integrated — lives in Lead Vault with status, owner, and history. No more competing spreadsheets.',
+  },
+  {
+    title: 'Calls that stay inside the CRM',
+    text: 'IVR click-to-call from the lead profile. Duration, status, and recording land on the same timeline managers already open.',
+  },
+  {
+    title: 'Follow-ups that actually happen',
+    text: 'Follow-up Radar ranks today, pending, and missed work so reps reconnect before deals go cold — without sticky-note chaos.',
+  },
+  {
+    title: 'Managers see the floor in real time',
+    text: 'Command Center and Insight Studio show intake, call volume, conversion, and rep load — so coaching happens from data, not guesswork.',
+  },
 ];
 
 export const PLAN_EXCLUSIVE_FEATURES = [
   {
     id: 'STARTER',
     name: 'Starter',
-    price: 'Rs 1,299/mo',
+    price: 'From ₹499/user/mo',
     tag: 'Trial includes this',
-    headline: 'Pipeline discipline without IVR overhead',
+    headline: 'Lead & follow-up discipline for small teams',
     exclusives: [
       'Lead Vault + Kanban with Pulse score',
       'Follow-up Radar with urgency badges',
       'Round-robin assignment',
-      'Up to 5 users and 500 leads',
-      'Command palette for fast navigation',
+      'Up to 5 users · Leads module',
+      'Command palette (⌘K)',
     ],
   },
   {
     id: 'PROFESSIONAL',
     name: 'Professional',
-    price: 'Rs 3,299/mo',
+    price: 'From ₹999/user/mo',
     tag: 'Most teams upgrade here',
     popular: true,
-    headline: 'Ads + calls in one timeline',
+    headline: 'Full CRM + IVR calling on one desk',
     exclusives: [
-      'Call Bridge with IVR click-to-call and recordings',
+      'Call Bridge — IVR click-to-call & recordings',
       'Insight Studio reports + CSV export',
-      'Email alert engine (assign, broadcast, reports)',
+      'Email alert engine',
       'Full automation pack',
-      'Up to 25 users and unlimited leads',
+      'Up to 25 users · combo pricing',
     ],
   },
   {
     id: 'ENTERPRISE',
     name: 'Enterprise',
-    price: 'Rs 5,999/mo',
+    price: 'Same rates · no seat cap',
     tag: 'Unlimited scale',
     headline: 'AI ops for multi-manager floors',
     exclusives: [
@@ -54,116 +74,129 @@ export const PLAN_EXCLUSIVE_FEATURES = [
   },
 ];
 
-/** Honest positioning vs spreadsheets and SIM-first dialer CRMs */
+/** CRM vs spreadsheet vs generic dialer tools — honest, not competitor-name bait */
 export const WHY_US_COMPARE = [
   {
-    label: 'Google & Meta form webhooks',
-    us: 'Built-in',
-    sheets: 'Manual export',
-    dialer: 'Often add-on',
+    label: 'Lead pipeline + statuses',
+    us: 'Built-in Lead Vault',
+    sheets: 'Manual columns',
+    dialer: 'Often thin CRM',
   },
   {
-    label: 'Pricing model',
-    us: 'Flat workspace / month',
-    sheets: 'Free but hidden labour',
-    dialer: 'Per user / month',
+    label: 'IVR click-to-call & recordings',
+    us: 'On the lead profile',
+    sheets: '—',
+    dialer: 'Separate dialer log',
   },
   {
-    label: 'IVR click-to-call',
-    us: 'Your IVR provider',
-    sheets: 'Not available',
-    dialer: 'SIM / mobile app',
-  },
-  {
-    label: 'Lead Pulse scoring',
-    us: 'Included',
-    sheets: 'Not available',
+    label: 'Follow-up discipline',
+    us: 'Radar + reminders',
+    sheets: 'Memory / WhatsApp',
     dialer: 'Varies',
   },
   {
-    label: 'Email OTP login',
-    us: 'Included, no SMS fees',
-    sheets: 'Not available',
-    dialer: 'SMS OTP common',
+    label: 'Team reports',
+    us: 'Insight Studio',
+    sheets: 'DIY pivot tables',
+    dialer: 'Call stats only',
+  },
+  {
+    label: 'Pricing model',
+    us: 'Per person · prepaid',
+    sheets: 'Hidden labour cost',
+    dialer: 'Often per user',
   },
   {
     label: 'Free trial',
-    us: '10 days, no card',
-    sheets: 'Not applicable',
-    dialer: '10 days typical',
-  },
-  {
-    label: 'Razorpay INR billing',
-    us: 'Included',
-    sheets: 'Not available',
-    dialer: 'Often available',
+    us: '10 days · no card',
+    sheets: '—',
+    dialer: 'Varies',
   },
 ];
 
 export const MOBILE_WEB_POINTS = [
   {
     title: 'Works on any phone browser',
-    text: 'Reps open Lead Vault and Follow-up Radar from Chrome without installing another app.',
+    text: 'Reps open leads, follow-ups, and call history from Chrome — no second install required.',
   },
   {
     title: 'Same login as desktop',
     text: 'Managers and closers see one pipeline whether they are on the floor or on the road.',
   },
   {
-    title: 'Native app roadmap',
-    text: 'A Play Store app is planned. Until then, the web desk is fully responsive for field teams.',
+    title: 'Native app on the roadmap',
+    text: 'Until a Play Store app ships, the web desk stays fully responsive for field teams.',
   },
 ];
 
 export const HOME_PROBLEM_POINTS = [
   {
-    title: 'Leads land in five different places',
-    text: 'Meta Business Suite, Google Sheets, manager inboxes, and WhatsApp lists compete for attention.',
+    title: 'Leads scatter across tools',
+    text: 'Sheets, inboxes, WhatsApp groups, and dialer apps each hold a different “truth.”',
   },
   {
     title: 'Follow-ups depend on memory',
-    text: 'Sticky notes and WhatsApp reminders fail the moment one person is on leave.',
+    text: 'When one rep is on leave, callbacks slip — and revenue quietly walks away.',
   },
   {
-    title: 'Calls happen outside the CRM',
-    text: 'Dialer apps do not talk to your pipeline, so managers cannot coach from real data.',
+    title: 'Calls live outside the CRM',
+    text: 'Managers cannot coach from recordings or timelines that never reach the lead record.',
   },
 ];
 
 export const HOME_WORKFLOW = [
   {
-    title: 'Webhook catches the lead',
-    text: 'Google Ads or Meta pushes the form fill into Lead Vault within seconds.',
+    title: 'Capture or import the lead',
+    text: 'Add manually, bulk import CSV/Excel, or connect intake webhooks — everything lands in Lead Vault.',
   },
   {
-    title: 'Round-robin assigns a owner',
-    text: 'The desk routes fresh leads fairly, so managers stop assigning manually in group chats.',
+    title: 'Assign an owner automatically',
+    text: 'Round-robin keeps the desk fair so managers stop assigning in the group chat.',
   },
   {
-    title: 'Rep calls from the profile',
-    text: 'IVR click-to-call logs duration, status, and recording against the same lead.',
+    title: 'Call from the lead profile',
+    text: 'IVR click-to-call logs duration, status, and recording on the same customer timeline.',
   },
   {
-    title: 'Radar surfaces what is due',
-    text: 'Follow-up Radar ranks today, pending, and missed work before deals go cold.',
+    title: 'Close the loop with Radar',
+    text: 'Follow-up Radar surfaces today, pending, and missed work before the deal goes cold.',
   },
 ];
 
-export const HOME_TESTIMONIAL = {
-  quote:
-    'We stopped losing weekend Meta leads. Everyone now works from the same pipeline, even part-time closers.',
-  name: 'Operations lead',
-  role: '12-person ed-tech sales team, Pune',
-};
+export const HOME_CAPABILITIES = [
+  { title: 'Lead Vault', text: 'Searchable pipeline with Pulse score, notes, and activity timeline.' },
+  { title: 'IVR Call Bridge', text: 'Click-to-call, recordings, and per-lead call history.' },
+  { title: 'Follow-up Radar', text: 'Today / pending / missed with urgency badges.' },
+  { title: 'Team Grid', text: 'Roles, seats, IVR agent mapping, and per-rep performance.' },
+  { title: 'Insight Studio', text: 'Employee, call, and conversion reports with CSV export.' },
+  { title: 'Command Center', text: 'Morning KPIs, trends, and shortcuts in one screen.' },
+  { title: 'Automation', text: 'Missed follow-up nudges, stale-lead alerts, assignment rules.' },
+  { title: 'Secure access', text: 'Email OTP sign-in and multi-tenant workspace isolation.' },
+];
+
+export const HOME_TESTIMONIALS = [
+  {
+    quote:
+      'We finally have one place for leads, callbacks, and call recordings. Managers coach from the timeline instead of chasing WhatsApp screenshots.',
+    name: 'Operations lead',
+    role: '12-person inside-sales team, Pune',
+  },
+  {
+    quote:
+      'Round-robin stopped the “who owns this?” fights. Follow-up Radar is what our reps open before lunch every day.',
+    name: 'Sales manager',
+    role: 'Local services floor, Ahmedabad',
+  },
+];
 
 export const MARKETING_FEATURES = [
   {
-    slug: 'webhook-intake',
-    category: 'Intake',
-    title: 'Google & Meta webhooks',
-    desc: 'Paste one URL per ad account. Form fills become leads with campaign, ad set, and form name attached.',
+    slug: 'lead-vault',
+    category: 'Pipeline',
+    title: 'Lead Vault',
+    desc: 'Every enquiry in one searchable desk — status, owner, notes, and activity history.',
     detail:
-      'Stop copying CSV exports. Each webhook hit creates a lead with source metadata so you know which creative drove the inquiry.',
+      'Table and Kanban views, bulk CSV/Excel import, duplicate-phone handling, and a full timeline so nothing lives only in a spreadsheet.',
   },
   {
     slug: 'lead-pulse',
@@ -171,15 +204,15 @@ export const MARKETING_FEATURES = [
     title: 'Lead Pulse score',
     desc: 'Hot, warm, and cold badges from status, follow-up date, source, and age.',
     detail:
-      'Pulse weighs pipeline stage, overdue follow-ups, unassigned state, and ad-source priority into a 0–100 score visible in table and Kanban.',
+      'Pulse weighs pipeline stage, overdue follow-ups, unassigned state, and age into a 0–100 score visible in table and Kanban.',
   },
   {
     slug: 'round-robin',
     category: 'Pipeline',
     title: 'Round-robin assignment',
-    desc: 'Fair rotation across active sales employees. Toggle manual assign when managers want control.',
+    desc: 'Fair rotation across active sales employees. Switch to manual when managers want control.',
     detail:
-      'Configure in Control Room. Webhook leads and manual imports can auto-route without ops babysitting a spreadsheet.',
+      'Configure in Control Room. New and unassigned leads auto-route without ops babysitting a sheet.',
   },
   {
     slug: 'ivr-calls',
@@ -187,7 +220,7 @@ export const MARKETING_FEATURES = [
     title: 'IVR click-to-call',
     desc: 'Dial from the lead profile. Completion webhooks attach recordings and call status to the timeline.',
     detail:
-      'Professional plan and above. Reps stay inside the CRM; managers audit call history without asking for screenshots.',
+      'Professional plan and above. Reps stay inside the CRM; managers audit call history without screenshots.',
   },
   {
     slug: 'follow-up-radar',
@@ -198,12 +231,20 @@ export const MARKETING_FEATURES = [
       'Automation can nudge reps when follow-ups slip. Managers see counts on the Command Center signal band.',
   },
   {
+    slug: 'insight-studio',
+    category: 'Analytics',
+    title: 'Insight Studio reports',
+    desc: 'Employee, call, and conversion reports with CSV export and email share.',
+    detail:
+      'Filter by date and source. Email a snapshot to managers without re-uploading to chat apps.',
+  },
+  {
     slug: 'email-alerts',
     category: 'Comms',
     title: 'Email alert engine',
-    desc: 'HTML emails when leads assign, admins broadcast notices, or reports are shared with the team.',
+    desc: 'HTML emails when leads assign, admins broadcast notices, or reports are shared.',
     detail:
-      'Available on Professional and Enterprise. Uses your workspace SMTP with polished templates and inbox delivery.',
+      'Available on Professional and Enterprise. Uses your workspace SMTP with polished templates.',
   },
   {
     slug: 'ai-advisor',
@@ -211,39 +252,29 @@ export const MARKETING_FEATURES = [
     title: 'AI Advisor missions',
     desc: 'Health score and suggested actions for ops leads before the month ends.',
     detail:
-      'Enterprise plan. Surfaces stale leads, missed follow-ups, and team load in a single command view.',
+      'Enterprise plan. Surfaces stale leads, missed follow-ups, and team load in one command view.',
   },
   {
-    slug: 'insight-studio',
-    category: 'Analytics',
-    title: 'Insight Studio reports',
-    desc: 'Employee, campaign, call, and conversion reports with CSV export and email share.',
+    slug: 'webhook-intake',
+    category: 'Integrations',
+    title: 'Lead intake webhooks',
+    desc: 'Optional form webhooks (including ad platforms) push enquiries into Lead Vault with source metadata.',
     detail:
-      'Filter by date and source. Email a snapshot to managers without exporting and re-uploading to Slack.',
+      'One of several intake paths alongside manual entry and Excel import — not the whole product identity.',
   },
   {
     slug: 'command-palette',
     category: 'Productivity',
     title: 'Command palette',
     desc: 'Jump to leads, follow-ups, reports, or settings from anywhere.',
-    detail:
-      'Press Ctrl+K or use the navbar trigger. Plan-gated routes hide automatically on Starter.',
-  },
-  {
-    slug: 'kanban',
-    category: 'Pipeline',
-    title: 'Kanban pipeline view',
-    desc: 'Status columns with Pulse badges so the team can scan pipeline shape quickly.',
-    detail:
-      'Toggle Table/Kanban in Lead Vault. Same filters apply; cards link straight to lead detail.',
+    detail: 'Press Ctrl+K or use the navbar trigger. Plan-gated routes hide automatically on Starter.',
   },
   {
     slug: 'email-otp',
     category: 'Security',
     title: 'Email OTP sign-in',
     desc: 'Verify workspace access via inbox OTP without SMS vendor lock-in.',
-    detail:
-      'Gmail App Password or SMTP provider. Registration and sign-in stay secure without phone OTP costs.',
+    detail: 'Gmail App Password or SMTP provider. Secure access without per-message SMS fees.',
   },
   {
     slug: 'razorpay',
@@ -251,11 +282,22 @@ export const MARKETING_FEATURES = [
     title: 'Razorpay checkout',
     desc: 'UPI, cards, netbanking, and wallets with INR subscriptions.',
     detail:
-      'Super Admins complete checkout during workspace creation or upgrade from Control Room to Subscription.',
+      'Super Admins complete checkout during workspace creation or upgrade from Control Room → Subscription.',
   },
 ];
 
-export const FEATURE_CATEGORIES = ['Intake', 'Pipeline', 'Calls', 'Tasks', 'Comms', 'Analytics', 'Enterprise', 'Productivity', 'Security', 'Billing'];
+export const FEATURE_CATEGORIES = [
+  'Pipeline',
+  'Calls',
+  'Tasks',
+  'Analytics',
+  'Comms',
+  'Enterprise',
+  'Integrations',
+  'Productivity',
+  'Security',
+  'Billing',
+];
 
 export const MARKETING_MODULES = [
   {
@@ -270,7 +312,7 @@ export const MARKETING_MODULES = [
     id: 'leads',
     name: 'Lead Vault',
     tag: 'Leads',
-    summary: 'Every inquiry from ads, imports, and manual entry in one searchable vault.',
+    summary: 'Every enquiry — import, manual, or integrated — in one searchable vault.',
     points: ['Table + Kanban', 'Pulse score', 'Bulk CSV/Excel import', 'Notes & activity timeline', 'Bulk delete'],
     forWho: 'Anyone touching the pipeline daily.',
   },
@@ -278,7 +320,7 @@ export const MARKETING_MODULES = [
     id: 'calls',
     name: 'Call Bridge',
     tag: 'IVR',
-    summary: 'Outbound calls and recordings tied to the lead, not a separate dialer log.',
+    summary: 'Outbound calls and recordings tied to the lead — not a separate dialer log.',
     points: ['Click-to-call', 'Recording playback', 'Filter by rep/status', 'Per-lead call history'],
     forWho: 'Inside sales teams on Professional plan or above.',
   },
@@ -294,9 +336,9 @@ export const MARKETING_MODULES = [
     id: 'reports',
     name: 'Insight Studio',
     tag: 'Reports',
-    summary: 'Campaign and rep performance without exporting to Excel every Friday.',
-    points: ['Employee leaderboard', 'Campaign breakdown', 'Conversion funnel', 'CSV export', 'Email share'],
-    forWho: 'Managers reviewing ROI on ad spend.',
+    summary: 'Rep and call performance without exporting to Excel every Friday.',
+    points: ['Employee leaderboard', 'Call breakdown', 'Conversion funnel', 'CSV export', 'Email share'],
+    forWho: 'Managers reviewing floor performance.',
   },
   {
     id: 'employees',
@@ -310,8 +352,8 @@ export const MARKETING_MODULES = [
     id: 'settings',
     name: 'Control Room',
     tag: 'Settings',
-    summary: 'Webhooks, automation toggles, billing, and team notices.',
-    points: ['Google/Meta webhook keys', 'Assignment method', 'Automation switches', 'Razorpay upgrade', 'Team broadcast'],
+    summary: 'Integrations, automation toggles, billing, and team notices.',
+    points: ['Webhook keys', 'Assignment method', 'Automation switches', 'Razorpay upgrade', 'Team broadcast'],
     forWho: 'Super Admins and ops owners.',
   },
 ];
@@ -320,23 +362,23 @@ export const MARKETING_PLANS = [
   {
     id: 'STARTER',
     name: 'Starter',
-    price: 'Rs 1,299',
-    period: '/month',
+    price: 'From ₹499',
+    period: '/user/mo',
     trialNote: '10-day free trial on signup',
-    bestFor: 'Small inside-sales teams testing structured follow-ups.',
-    features: ['Up to 5 users', '500 leads', 'Command Center + Lead Vault', 'Follow-up Radar', 'In-app notifications'],
+    bestFor: 'Small teams building lead and follow-up habit.',
+    features: ['Up to 5 users', 'Leads module', 'Command Center + Lead Vault', 'Follow-up Radar', 'In-app notifications'],
   },
   {
     id: 'PROFESSIONAL',
     name: 'Professional',
-    price: 'Rs 3,299',
-    period: '/month',
+    price: 'From ₹999',
+    period: '/user/mo',
     trialNote: '10-day free trial on signup',
     popular: true,
-    bestFor: 'Growing teams running ads + IVR daily.',
+    bestFor: 'Growing floors that need CRM + IVR daily.',
     features: [
       'Up to 25 users',
-      'Unlimited leads',
+      'Leads + IVR combo',
       'Call Bridge + IVR',
       'Insight Studio reports',
       'Email alerts',
@@ -346,8 +388,8 @@ export const MARKETING_PLANS = [
   {
     id: 'ENTERPRISE',
     name: 'Enterprise',
-    price: 'Rs 5,999',
-    period: '/month',
+    price: 'Same rates',
+    period: '· no seat cap',
     trialNote: '10-day free trial on signup',
     bestFor: 'Multi-manager floors needing AI ops and unlimited seats.',
     features: [
@@ -355,8 +397,7 @@ export const MARKETING_PLANS = [
       'AI Advisor on dashboard',
       'Priority support tier',
       'Custom webhooks',
-      'Advanced analytics',
-      'Email alerts',
+      'Everything in Professional',
     ],
   },
 ];
@@ -364,10 +405,10 @@ export const MARKETING_PLANS = [
 export const PRICING_COMPARE = [
   { label: 'Users', starter: '5', pro: '25', ent: 'Unlimited' },
   { label: 'Leads', starter: '500', pro: 'Unlimited', ent: 'Unlimited' },
-  { label: 'IVR / calls', starter: 'Not included', pro: 'Included', ent: 'Included' },
-  { label: 'Reports', starter: 'Not included', pro: 'Included', ent: 'Included' },
-  { label: 'Email alerts', starter: 'Not included', pro: 'Included', ent: 'Included' },
-  { label: 'AI Advisor', starter: 'Not included', pro: 'Not included', ent: 'Included' },
+  { label: 'IVR / calls', starter: '—', pro: '✓', ent: '✓' },
+  { label: 'Reports', starter: '—', pro: '✓', ent: '✓' },
+  { label: 'Email alerts', starter: '—', pro: '✓', ent: '✓' },
+  { label: 'AI Advisor', starter: '—', pro: '—', ent: '✓' },
 ];
 
 export const MARKETING_FAQ = [
@@ -376,40 +417,36 @@ export const MARKETING_FAQ = [
     a: 'Yes. Every new workspace gets a 10-day full trial with no credit card required at signup. After the trial, pay via Razorpay to keep access.',
   },
   {
-    q: 'Is Sales Lead CRM built for Indian businesses?',
-    a: 'Yes. Billing is in INR via Razorpay (UPI, cards, netbanking). Workspaces support Indian phone formats, and email OTP avoids international SMS costs.',
+    q: 'What is Sales Lead CRM built for?',
+    a: 'Indian sales teams that need one workspace for leads, IVR calls, follow-ups, team roles, and reports — not a separate dialer log and a separate spreadsheet.',
   },
   {
-    q: 'How do Google Ads and Meta leads enter the CRM?',
-    a: 'Copy the webhook URL from Control Room to Integrations in your ad platform. Each form submission creates a lead with campaign metadata automatically.',
+    q: 'Does it include IVR calling?',
+    a: 'Yes on Professional and Enterprise. Reps call from the lead profile; your IVR provider sends completion webhooks with status and recording URL.',
+  },
+  {
+    q: 'How do leads enter the CRM?',
+    a: 'Manual entry, CSV/Excel import, and optional intake webhooks. Ad-platform form webhooks are supported as one integration — not the only way to work.',
   },
   {
     q: 'Do I need a separate SMS provider for login?',
     a: 'No. Sign-in and registration use email OTP through your SMTP (e.g. Gmail App Password). Phone numbers are stored for contact only.',
   },
   {
-    q: 'Can I import existing leads from Excel?',
-    a: 'Yes. Lead Vault supports CSV and Excel bulk import with duplicate-phone skipping. All imports are tagged as Manual source.',
-  },
-  {
     q: 'What is Lead Pulse?',
-    a: 'A 0–100 priority score shown on each lead. It considers status, follow-up due date, assignment, source, and age so reps focus on deals likely to close.',
-  },
-  {
-    q: 'Does the CRM support IVR click-to-call?',
-    a: 'On Professional and Enterprise plans. Reps call from the lead profile; your IVR provider sends completion webhooks with status and recording URL.',
+    a: 'A 0–100 priority score on each lead. It considers status, follow-up due date, assignment, source, and age so reps focus on deals likely to close.',
   },
   {
     q: 'Can managers see employee performance?',
-    a: 'Yes. Insight Studio includes employee reports, daily/monthly stats, and CSV export. Team Grid links to per-rep performance pages.',
+    a: 'Yes. Insight Studio includes employee reports, call stats, and CSV export. Team Grid links to per-rep performance pages.',
   },
   {
     q: 'How does round-robin assignment work?',
-    a: 'Active sales employees rotate automatically on new webhook or unassigned leads. Switch to manual assignment in Control Room when needed.',
+    a: 'Active sales employees rotate automatically on new or unassigned leads. Switch to manual assignment in Control Room when needed.',
   },
   {
     q: 'Can I upgrade or change plans later?',
-    a: 'Super Admins upgrade from Control Room to Subscription. Razorpay handles checkout, and your workspace keeps existing data.',
+    a: 'Super Admins upgrade from Control Room → Subscription. Razorpay handles checkout; your workspace keeps existing data.',
   },
   {
     q: 'Is my data isolated from other companies?',
@@ -417,10 +454,10 @@ export const MARKETING_FAQ = [
   },
   {
     q: 'What automation alerts are included?',
-    a: 'Missed follow-up nudges, stale lead warnings, unassigned lead alerts, and follow-up reminders are configurable in Control Room.',
+    a: 'Missed follow-up nudges, stale lead warnings, unassigned lead alerts, and follow-up reminders — configurable in Control Room.',
   },
   {
     q: 'How fast can we go live?',
-    a: 'Most teams create a workspace, connect one webhook, and import reps within a day. Email OTP and Razorpay are the only external setup steps.',
+    a: 'Most teams create a workspace, import leads or reps, and start using Follow-up Radar the same day. Connect IVR when you are ready on Professional.',
   },
 ];

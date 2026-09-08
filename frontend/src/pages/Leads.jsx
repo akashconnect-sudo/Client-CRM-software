@@ -28,7 +28,7 @@ export default function Leads() {
   const [listError, setListError] = useState('');
   const [formError, setFormError] = useState('');
   const [filters, setFilters] = useState({
-    search: '',
+    search: searchParams.get('search') || '',
     status: searchParams.get('status') || '',
     source: searchParams.get('source') || '',
     assignedToId: '',
@@ -70,22 +70,31 @@ export default function Leads() {
   }, [searchParams, isAdmin]);
 
   useEffect(() => {
-    const status = searchParams.get('status');
-    const source = searchParams.get('source');
-    const assignedToId = searchParams.get('assignedToId');
-    if (status || source || assignedToId) {
-      setFilters((f) => ({
-        ...f,
-        status: status || '',
-        source: source || '',
-        assignedToId: assignedToId || '',
-      }));
-    }
+    const status = searchParams.get('status') || '';
+    const source = searchParams.get('source') || '';
+    const assignedToId = searchParams.get('assignedToId') || '';
+    const search = searchParams.get('search');
+    setFilters((f) => ({
+      ...f,
+      status,
+      source,
+      assignedToId,
+      ...(search != null ? { search } : {}),
+    }));
   }, [searchParams]);
 
   useEffect(() => {
     load();
   }, [filters.status, filters.source, filters.assignedToId]);
+
+  // Apply navbar / deep-link search once params land
+  useEffect(() => {
+    const search = searchParams.get('search');
+    if (search == null) return undefined;
+    const t = window.setTimeout(() => load(), 0);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -188,8 +197,8 @@ export default function Leads() {
     <div className="page-enter">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-main tracking-tight">Lead Vault</h1>
-          <p className="text-sm text-muted mt-1">Table or Kanban · Pulse-ranked priority</p>
+          <h1 className="text-2xl font-bold text-main tracking-tight">Customers</h1>
+          <p className="text-sm text-muted mt-1">Lead pipeline · table or Kanban</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <div className="view-toggle" role="group" aria-label="View mode">

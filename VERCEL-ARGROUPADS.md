@@ -59,7 +59,7 @@ Your screenshot showed an old deploy (`807fffe`). Latest code is on:
 From your PC (paste same `DATABASE_URL` in terminal, one line):
 
 ```powershell
-cd c:\Users\akash\OneDrive\Desktop\CRM
+cd E:\CRM
 $env:DATABASE_URL="postgresql://neondb_owner:PASSWORD@ep-damp-mouse-aprwwg9r-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require"
 npx prisma db push --schema=backend/prisma/schema.prisma
 ```

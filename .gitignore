@@ -16,3 +16,11 @@ scripts/vercel-env.local
 .env*.local
 .env.vercel.pull
 backend/.env.vercel.pull
+ai-inference/.env
+ai-inference/.env.runpod
+ai-inference/.runpod-secret
+ai-inference/.venv/
+ai-inference/ollama-bin/
+ai-inference/__pycache__/
+__pycache__/
+*.pyc

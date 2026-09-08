@@ -3,7 +3,7 @@ import prisma from '../config/db.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { MAX_IMPORT_EMPLOYEES } from '../constants/limits.js';
 import { checkUserSeatAvailability, countCompanyUsers, getCompanyPlan, checkManagerAvailability, countCompanyManagers } from '../services/planEnforcementService.js';
-import { getPlanLimits, planLimitMessage } from '../constants/planLimits.js';
+import { planLimitMessage } from '../constants/planLimits.js';
 
 const userSelect = {
   id: true,
@@ -48,15 +48,16 @@ export const listEmployees = asyncHandler(async (req, res) => {
 
   const plan = await getCompanyPlan(req.companyId);
   const used = await countCompanyUsers(req.companyId);
-  const limits = getPlanLimits(plan);
+  const seatsAvail = await checkUserSeatAvailability(req.companyId, plan, 0);
 
   res.json({
     success: true,
     data: employees,
     seats: {
       used,
-      max: limits.maxUsers,
-      remaining: limits.maxUsers == null ? null : Math.max(0, limits.maxUsers - used),
+      max: seatsAvail.max,
+      remaining: seatsAvail.max == null ? null : seatsAvail.remaining,
+      extraSeats: seatsAvail.extraSeats || 0,
       plan,
     },
   });

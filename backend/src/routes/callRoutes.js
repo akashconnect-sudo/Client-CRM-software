@@ -7,10 +7,11 @@ import {
   initiateCall,
 } from '../controllers/callController.js';
 import { authenticate, managerOrSuperAdmin } from '../middleware/auth.js';
+import { requireModuleFeature } from '../middleware/moduleGate.js';
 
 const router = Router();
 
-router.use(authenticate, managerOrSuperAdmin);
+router.use(authenticate, managerOrSuperAdmin, requireModuleFeature('callBridge'));
 
 router.post('/initiate', initiateCall);
 router.get('/', listCalls);

@@ -9,6 +9,7 @@ import { MAX_LIST_LEADS, MAX_BULK_DELETE } from '../constants/limits.js';
 import { getNextLeadNumber } from '../services/leadNumberService.js';
 import { checkLeadCapacity } from '../services/planEnforcementService.js';
 import { planLimitMessage } from '../constants/planLimits.js';
+import { enqueuePulseReasoningIfEligible } from '../ai/jobService.js';
 
 const LIST_LEADS_MAX = MAX_LIST_LEADS;
 
@@ -223,6 +224,8 @@ export const updateLead = asyncHandler(async (req, res) => {
     await logActivity(id, 'STATUS_CHANGED', `Status changed from ${existing.status} to ${status}`);
   }
 
+  enqueuePulseReasoningIfEligible(req.companyId, id).catch(() => {});
+
   res.json({ success: true, data: lead });
 });
 
@@ -293,6 +296,7 @@ export const addNote = asyncHandler(async (req, res) => {
     include: { author: { select: { id: true, name: true } } },
   });
   await logActivity(id, 'NOTE_ADDED', `Note added by ${req.user.name}`);
+  enqueuePulseReasoningIfEligible(req.companyId, id).catch(() => {});
   res.status(201).json({ success: true, data: note });
 });
 

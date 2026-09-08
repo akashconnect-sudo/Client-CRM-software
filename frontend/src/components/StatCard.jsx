@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 export default function StatCard({ title, value, subtitle, icon, color = 'primary', to, hint }) {
   const iconStyles = {
     primary: 'bg-primary-600/15 text-primary-500 dark:text-primary-400',
+    gold: 'bg-[rgba(201,162,39,0.14)] text-[#c9a227]',
     green: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
     amber: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
     red: 'bg-red-500/15 text-red-600 dark:text-red-400',
@@ -10,19 +11,15 @@ export default function StatCard({ title, value, subtitle, icon, color = 'primar
   };
 
   const inner = (
-    <div className="flex items-start justify-between gap-2 h-full min-h-[88px]">
+    <div className="stat-card__inner">
       <div className="min-w-0 flex-1">
-        <p className="text-xs sm:text-sm text-muted font-medium leading-snug line-clamp-2">{title}</p>
-        <p className="text-xl sm:text-2xl lg:text-3xl font-bold mt-2 text-main tracking-tight">{value ?? 0}</p>
-        {subtitle && <p className="text-xs text-subtle mt-1">{subtitle}</p>}
-        {to && (
-          <p className="text-xs text-primary-500 mt-2 font-medium group-hover:underline">
-            {hint || 'Open →'}
-          </p>
-        )}
+        <p className="stat-card__title">{title}</p>
+        <p className="stat-card__value">{value ?? 0}</p>
+        {subtitle && <p className="stat-card__sub">{subtitle}</p>}
+        {to && <p className="stat-card__hint">{hint || 'Open →'}</p>}
       </div>
       {icon && (
-        <div className={`p-2 sm:p-3 rounded-xl shrink-0 ${iconStyles[color]} transition-transform duration-300 group-hover:scale-110`}>
+        <div className={`stat-card__icon ${iconStyles[color] || iconStyles.primary}`}>
           {icon}
         </div>
       )}
@@ -31,14 +28,11 @@ export default function StatCard({ title, value, subtitle, icon, color = 'primar
 
   if (to) {
     return (
-      <Link
-        to={to}
-        className="card group block h-full hover:border-primary-500/50 hover:shadow-glow active:scale-[0.98] transition-all cursor-pointer no-underline relative z-10"
-      >
+      <Link to={to} className="stat-card stat-card--link group no-underline">
         {inner}
       </Link>
     );
   }
 
-  return <div className="card group h-full">{inner}</div>;
+  return <div className="stat-card">{inner}</div>;
 }

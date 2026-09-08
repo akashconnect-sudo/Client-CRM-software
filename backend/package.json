@@ -16,9 +16,13 @@
     "db:seed": "node prisma/seed.js",
     "db:clear": "node prisma/clear-data.js",
     "db:reset": "node prisma/clear-data.js && node prisma/seed.js",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:migrate-ai": "node prisma/apply-ai-layer-migration.js && prisma generate && prisma db push",
+    "ai:worker": "node scripts/ai-worker.js"
   },
   "dependencies": {
+    "@langchain/core": "^0.3.80",
+    "@langchain/openai": "^0.5.18",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",

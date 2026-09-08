@@ -171,9 +171,9 @@ export function buildAdvisorState({ data = {}, followUps = [], employees = [] })
   const signals = [
     {
       id: 'health',
-      label: 'Health index',
+      label: 'Pipeline health',
       value: `${healthScore}`,
-      unit: healthLabel,
+      unit: `/100 · ${healthLabel}`,
       tone: healthScore >= 75 ? 'good' : healthScore >= 50 ? 'warn' : 'bad',
       action: null,
     },

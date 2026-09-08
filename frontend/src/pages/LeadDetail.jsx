@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { leadsApi, employeesApi, callsApi } from '../api';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { leadsApi, employeesApi, callsApi, aiApi, pollAiJob } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import StatusBadge from '../components/StatusBadge';
 import AudioPlayer from '../components/AudioPlayer';
 import LoadingSpinner from '../components/LoadingSpinner';
+import LeadPulseBadge from '../components/leads/LeadPulseBadge';
 import { LEAD_STATUSES, SOURCE_LABELS, formatDate, formatDuration } from '../utils/constants';
+import { userCanAccessAI } from '../utils/planAccess';
 
 export default function LeadDetail() {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAdmin, user } = useAuth();
   const toast = useToast();
+  const canAI = userCanAccessAI(user);
   const [lead, setLead] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [note, setNote] = useState('');
@@ -20,6 +24,8 @@ export default function LeadDetail() {
   const [assignId, setAssignId] = useState('');
   const [calling, setCalling] = useState(false);
   const [callMsg, setCallMsg] = useState('');
+  const [draft, setDraft] = useState('');
+  const [draftBusy, setDraftBusy] = useState(false);
 
   const load = () => leadsApi.get(id).then((res) => setLead(res.data.data));
 
@@ -97,6 +103,28 @@ export default function LeadDetail() {
     }
   };
 
+  const handleSuggestMessage = async () => {
+    setDraftBusy(true);
+    try {
+      const res = await aiApi.suggestFollowUp(id);
+      const job = await pollAiJob(res.data?.data?.jobId);
+      if (job.status === 'FAILED') throw new Error(job.error || 'Draft failed');
+      setDraft(job.result?.draft || '');
+      toast.success('Draft ready — review before sending');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Could not draft message'));
+    } finally {
+      setDraftBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!canAI || !lead || searchParams.get('suggest') !== '1' || draftBusy || draft) return;
+    setSearchParams({}, { replace: true });
+    handleSuggestMessage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canAI, lead?.id, searchParams]);
+
   if (!lead) return <LoadingSpinner />;
 
   return (
@@ -106,6 +134,9 @@ export default function LeadDetail() {
         <div>
           <h1 className="text-2xl font-bold text-main tracking-tight">{lead.customerName}</h1>
           <p className="text-muted">SNO {lead.leadNumber} &middot; {SOURCE_LABELS[lead.source]}</p>
+          <div className="mt-2">
+            <LeadPulseBadge lead={lead} />
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {isAdmin && (
@@ -144,10 +175,30 @@ export default function LeadDetail() {
                 <div className="space-y-4">
                   {lead.callLogs.map((c) => (
                     <div key={c.id} className="border rounded-lg p-4 flex flex-wrap justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{c.callType} &middot; {c.callStatus}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">
+                          {c.callType} &middot; {c.callStatus}
+                          {c.sentimentLabel && (
+                            <span className={`ml-2 text-xs font-semibold sentiment-pill sentiment-pill--${String(c.sentimentLabel).toLowerCase()}`}>
+                              {c.sentimentLabel}
+                              {c.sentimentScore != null ? ` · ${Math.round(Number(c.sentimentScore) * 100)}%` : ''}
+                            </span>
+                          )}
+                          {c.sourceMode === 'EXTERNAL_IVR' && c.provider && (
+                            <span className="ml-2 text-xs font-normal text-muted">via {c.provider}</span>
+                          )}
+                        </p>
                         <p className="text-sm text-muted">{formatDate(c.callStartTime)} &middot; {formatDuration(c.durationSeconds)}</p>
                         <p className="text-sm">Agent: {c.employee?.name || 'Unknown'}</p>
+                        {c.summary && (
+                          <p className="text-sm mt-2 text-main"><span className="text-muted">AI summary:</span> {c.summary}</p>
+                        )}
+                        {c.transcript && (
+                          <details className="mt-2 text-sm">
+                            <summary className="cursor-pointer text-muted">Transcript</summary>
+                            <p className="mt-1 whitespace-pre-wrap text-main">{c.transcript}</p>
+                          </details>
+                        )}
                       </div>
                       <AudioPlayer url={c.recordingUrl} />
                     </div>
@@ -213,6 +264,39 @@ export default function LeadDetail() {
             <textarea className="input" rows={2} placeholder="Remarks" value={followUp.remarks}
               onChange={(e) => setFollowUp({ ...followUp, remarks: e.target.value })} />
             <button className="btn-primary w-full" onClick={handleFollowUp}>Schedule</button>
+            {canAI && (
+              <>
+                <button
+                  type="button"
+                  className="btn-secondary w-full"
+                  onClick={handleSuggestMessage}
+                  disabled={draftBusy}
+                >
+                  {draftBusy ? 'Drafting…' : 'Suggest message'}
+                </button>
+                {draft && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted">Review & edit — never auto-sent</p>
+                    <textarea
+                      className="input"
+                      rows={5}
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn-secondary w-full"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(draft);
+                        toast.success('Copied — paste into your channel and send manually');
+                      }}
+                    >
+                      Copy draft
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

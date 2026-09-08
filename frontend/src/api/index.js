@@ -16,11 +16,22 @@ export const authApi = {
 
 export const billingApi = {
   plans: () => client.get('/billing/plans'),
+  catalog: () => client.get('/billing/catalog'),
+  quote: (data) => client.post('/billing/quote', data),
   confirmPayment: (data) => client.post('/billing/confirm-payment', data),
   activate: (data) => client.post('/billing/activate', data),
   subscription: () => client.get('/billing/subscription'),
   checkout: (data) => client.post('/billing/checkout', data),
   checkoutPublic: (data) => client.post('/billing/checkout/public', data),
+  seatCheckout: (data) => client.post('/billing/seats/checkout', data),
+  seatConfirm: (data) => client.post('/billing/seats/confirm', data),
+};
+
+export const ivrApi = {
+  providers: () => client.get('/ivr/providers'),
+  getIntegration: () => client.get('/ivr/integration'),
+  saveIntegration: (data) => client.put('/ivr/integration', data),
+  testIntegration: () => client.post('/ivr/integration/test'),
 };
 
 export const companiesApi = {
@@ -91,3 +102,25 @@ export const settingsApi = {
   assignSuperAdmin: (data) => client.post('/settings/super-admin', data),
   usersForPromotion: () => client.get('/settings/users-for-promotion'),
 };
+
+export const aiApi = {
+  status: () => client.get('/ai/status'),
+  askAdvisor: (data) => client.post('/ai/advisor/ask', data),
+  suggestFollowUp: (leadId) => client.post(`/ai/follow-up-draft/${leadId}`),
+  pulse: (leadId) => client.post(`/ai/pulse/${leadId}`),
+  getJob: (jobId) => client.get(`/ai/jobs/${jobId}`),
+  listJobs: (params) => client.get('/ai/jobs', { params }),
+};
+
+/** Poll an AI job until DONE/FAILED or timeout (ms). */
+export async function pollAiJob(jobId, { intervalMs = 1500, timeoutMs = 90000 } = {}) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const res = await aiApi.getJob(jobId);
+    const job = res.data?.data;
+    if (!job) throw new Error('AI job missing');
+    if (job.status === 'DONE' || job.status === 'FAILED') return job;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  throw new Error('AI job timed out — check the worker is running');
+}

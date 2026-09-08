@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { authApi, billingApi } from '../api';
+import { authApi } from '../api';
 import AuthMarketingPanel from '../components/auth/AuthMarketingPanel';
 import AuthFormPanel from '../components/auth/AuthFormPanel';
 import AuthFlowTabs from '../components/auth/AuthFlowTabs';
@@ -9,14 +9,19 @@ import OAuthButtons from '../components/auth/OAuthButtons';
 import InlineEmailOtp from '../components/auth/InlineEmailOtp';
 import PasswordStrengthMeter from '../components/auth/PasswordStrengthMeter';
 import { normalizePhoneInput } from '../utils/phoneVerifySession';
-import PlanSelector from '../components/billing/PlanSelector';
+import ModuleEntitlementPicker from '../components/billing/ModuleEntitlementPicker';
 import PaymentStep from '../components/billing/PaymentStep';
 import { IconEye, IconEyeOff } from '../components/auth/AuthIcons';
 import { PAGE_SEO } from '../constants/marketingSeo';
 import MarketingSEO from '../components/marketing/MarketingSEO';
 import { checkPassword } from '../utils/passwordPolicy';
+import { PACKAGE_META, computePrepaidTotal } from '../constants/modularPricing';
 
 const REMEMBER_KEY = 'crm-remember-email';
+
+function isTier(t) {
+  return ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'].includes(t);
+}
 
 function EmailFieldWithOtp({
   email,
@@ -80,7 +85,24 @@ export default function Login() {
   const [companyName, setCompanyName] = useState('');
   const [role, setRole] = useState('SALES_EMPLOYEE');
   const [selectedPlan, setSelectedPlan] = useState('PROFESSIONAL');
-  const [plans, setPlans] = useState([]);
+  const [entitlement, setEntitlement] = useState(() => {
+    const q = computePrepaidTotal({
+      packageKey: 'COMBO',
+      tier: 'PROFESSIONAL',
+      billingCycleMonths: 6,
+      desiredSeats: 5,
+    });
+    return {
+      packageKey: 'COMBO',
+      modules: q.modules,
+      tier: 'PROFESSIONAL',
+      billingCycleMonths: 6,
+      desiredSeats: 5,
+      seatCount: q.seatCount,
+      extraSeats: q.extraSeats,
+      quote: q,
+    };
+  });
   const [setup, setSetup] = useState({ canRegisterSuperAdmin: true, emailOtpRequired: true });
   const [workspaceMode, setWorkspaceMode] = useState('create');
   const [paymentSession, setPaymentSession] = useState(null);
@@ -120,15 +142,48 @@ export default function Login() {
     const modeParam = searchParams.get('mode');
     if (modeParam === 'register') setMode('register');
     const planParam = searchParams.get('plan');
-    if (planParam && ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'].includes(planParam)) {
+    if (planParam && isTier(planParam)) {
       setSelectedPlan(planParam);
+    }
+    const packageParam = (searchParams.get('package') || '').toUpperCase();
+    const tierParam = (searchParams.get('tier') || searchParams.get('plan') || '').toUpperCase();
+    const cycleParam = parseInt(searchParams.get('cycle') || searchParams.get('months') || '', 10);
+    const seatsParam = parseInt(searchParams.get('seats') || '', 10);
+    const extraParam = parseInt(searchParams.get('extraSeats') || '', 10);
+    if (
+      PACKAGE_META[packageParam] ||
+      isTier(tierParam) ||
+      [3, 6, 12].includes(cycleParam) ||
+      seatsParam ||
+      extraParam
+    ) {
+      const packageKey = PACKAGE_META[packageParam] ? packageParam : 'COMBO';
+      const tier = isTier(tierParam) ? tierParam : 'PROFESSIONAL';
+      const billingCycleMonths = [3, 6, 12].includes(cycleParam) ? cycleParam : 6;
+      const desiredSeats = seatsParam > 0 ? seatsParam : 5;
+      const quote = computePrepaidTotal({
+        packageKey,
+        tier,
+        billingCycleMonths,
+        desiredSeats,
+      });
+      setEntitlement({
+        packageKey,
+        modules: quote.modules,
+        tier,
+        billingCycleMonths,
+        desiredSeats,
+        seatCount: quote.seatCount,
+        extraSeats: quote.extraSeats,
+        quote,
+      });
+      setSelectedPlan(tier);
     }
   }, [searchParams]);
 
   useEffect(() => {
     authApi.setupStatus().then((res) => setSetup(res.data.data)).catch(() => {});
     authApi.oauthProviders().then((res) => setOauthProviders(res.data.data || [])).catch(() => {});
-    billingApi.plans().then((res) => setPlans(res.data.data || [])).catch(() => {});
   }, []);
 
   const sendEmailOtp = async () => {
@@ -146,7 +201,12 @@ export default function Login() {
       setEmailOtpSent(true);
       return true;
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not send verification code');
+      setError(
+        err.response?.data?.message ||
+          (err.code === 'ERR_NETWORK' || !err.response
+            ? 'Server is not reachable. Start the API (npm run dev:api) and try again.'
+            : 'Could not send verification code')
+      );
       return false;
     } finally {
       setLoading(false);
@@ -179,7 +239,13 @@ export default function Login() {
       password,
       role: isCreatingWorkspace ? undefined : role,
       companyName: companyName || undefined,
-      plan: isCreatingWorkspace ? selectedPlan : undefined,
+      plan: isCreatingWorkspace ? entitlement.tier || selectedPlan : undefined,
+      modules: isCreatingWorkspace ? entitlement.modules : undefined,
+      tier: isCreatingWorkspace ? entitlement.tier : undefined,
+      billingCycleMonths: isCreatingWorkspace ? entitlement.billingCycleMonths : undefined,
+      seatCount: isCreatingWorkspace ? entitlement.seatCount || entitlement.desiredSeats : undefined,
+      desiredSeats: isCreatingWorkspace ? entitlement.desiredSeats : undefined,
+      extraSeats: isCreatingWorkspace ? entitlement.extraSeats || 0 : undefined,
       createWorkspace: isCreatingWorkspace,
       emailVerifyToken,
     };
@@ -190,6 +256,11 @@ export default function Login() {
       setPaymentSession({
         paymentToken: data.paymentToken,
         planDetails: data.planDetails,
+        modules: entitlement.modules,
+        tier: entitlement.tier,
+        billingCycleMonths: entitlement.billingCycleMonths,
+        seatCount: entitlement.seatCount || entitlement.desiredSeats,
+        extraSeats: entitlement.extraSeats || 0,
       });
       return;
     }
@@ -296,6 +367,11 @@ export default function Login() {
             <PaymentStep
               paymentToken={paymentSession.paymentToken}
               planDetails={paymentSession.planDetails}
+              modules={paymentSession.modules}
+              tier={paymentSession.tier}
+              billingCycleMonths={paymentSession.billingCycleMonths}
+              seatCount={paymentSession.seatCount}
+              extraSeats={paymentSession.extraSeats}
               onSuccess={onPaymentSuccess}
               onError={setError}
             />
@@ -324,7 +400,7 @@ export default function Login() {
             {mode === 'signin'
               ? 'Sign in with your email and password.'
               : setup.canRegisterSuperAdmin
-                ? `Pick a plan and register — ${setup.trialDays || 10}-day free trial, no card required.`
+                ? `${setup.trialDays || 10}-day free trial. Tell us your team size — pay only when the trial ends.`
                 : 'Join your team workspace.'}
           </p>
 
@@ -447,10 +523,6 @@ export default function Login() {
                 />
               </div>
 
-              {(setup.canRegisterSuperAdmin || workspaceMode === 'create') && (
-                <PlanSelector plans={plans} selected={selectedPlan} onSelect={setSelectedPlan} />
-              )}
-
               <div className="auth-field">
                 <label className="auth-label">Full name</label>
                 <input
@@ -502,6 +574,16 @@ export default function Login() {
                 <PasswordStrengthMeter password={password} />
               </div>
 
+              {(setup.canRegisterSuperAdmin || workspaceMode === 'create') && (
+                <ModuleEntitlementPicker
+                  value={entitlement}
+                  onChange={(next) => {
+                    setEntitlement(next);
+                    setSelectedPlan(next.tier);
+                  }}
+                />
+              )}
+
               {workspaceMode === 'join' && !setup.canRegisterSuperAdmin && (
                 <div className="auth-field">
                   <label className="auth-label">Role</label>
@@ -524,7 +606,7 @@ export default function Login() {
                 {loading
                   ? 'Please wait…'
                   : setup.canRegisterSuperAdmin || workspaceMode === 'create'
-                    ? 'Register & continue to payment'
+                    ? 'Start free trial'
                     : 'Create account'}
               </button>
             </form>

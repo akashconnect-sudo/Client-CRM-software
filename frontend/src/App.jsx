@@ -19,6 +19,15 @@ import CallHistory from './pages/CallHistory';
 import FollowUps from './pages/FollowUps';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Allocations from './pages/desk/Allocations';
+import Interactions from './pages/desk/Interactions';
+import GmailInbox from './pages/desk/GmailInbox';
+import FollowUpCalendar from './pages/desk/FollowUpCalendar';
+import RecurringFollowUps from './pages/desk/RecurringFollowUps';
+import RechurnCustomers from './pages/desk/RechurnCustomers';
+import Analytics from './pages/desk/Analytics';
+import MessageTemplates from './pages/desk/MessageTemplates';
+import PlanLocked from './pages/PlanLocked';
 import BillingSuccess from './pages/BillingSuccess';
 import BillingCancel from './pages/BillingCancel';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -53,13 +62,23 @@ function AppRoutes() {
         }
       >
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="allocations" element={<ProtectedRoute adminOnly requiredFeature="allocations"><Allocations /></ProtectedRoute>} />
         <Route path="leads" element={<ProtectedRoute requiredFeature="leads"><Leads /></ProtectedRoute>} />
         <Route path="leads/:id" element={<ProtectedRoute requiredFeature="leads"><LeadDetail /></ProtectedRoute>} />
+        <Route path="interactions" element={<ProtectedRoute requiredFeature="interactions"><Interactions /></ProtectedRoute>} />
+        <Route path="inbox/gmail" element={<ProtectedRoute requiredFeature="gmailInbox"><GmailInbox /></ProtectedRoute>} />
         <Route path="employees" element={<ProtectedRoute adminOnly requiredFeature="employees"><Employees /></ProtectedRoute>} />
         <Route path="employees/:id/performance" element={<ProtectedRoute adminOnly requiredFeature="employees"><EmployeePerformance /></ProtectedRoute>} />
-        <Route path="calls" element={<ProtectedRoute adminOnly requiredFeature="calls"><CallHistory /></ProtectedRoute>} />
+        <Route path="calls" element={<ProtectedRoute adminOnly requiredFeature="callBridge"><CallHistory /></ProtectedRoute>} />
         <Route path="follow-ups" element={<ProtectedRoute requiredFeature="follow-ups"><FollowUps /></ProtectedRoute>} />
+        <Route path="calendar" element={<ProtectedRoute requiredFeature="calendar"><FollowUpCalendar /></ProtectedRoute>} />
+        <Route path="recurring-follow-ups" element={<ProtectedRoute requiredFeature="recurringFollowUps"><RecurringFollowUps /></ProtectedRoute>} />
         <Route path="reports" element={<ProtectedRoute adminOnly requiredFeature="reports"><Reports /></ProtectedRoute>} />
+        <Route path="rechurn" element={<ProtectedRoute requiredFeature="rechurn"><RechurnCustomers /></ProtectedRoute>} />
+        <Route path="analytics" element={<ProtectedRoute adminOnly requiredFeature="analytics"><Analytics /></ProtectedRoute>} />
+        <Route path="templates/whatsapp" element={<ProtectedRoute requiredFeature="whatsappTemplates"><MessageTemplates channel="whatsapp" /></ProtectedRoute>} />
+        <Route path="templates/email" element={<ProtectedRoute requiredFeature="emailTemplates"><MessageTemplates channel="email" /></ProtectedRoute>} />
+        <Route path="locked" element={<PlanLocked />} />
         <Route path="settings" element={<ProtectedRoute adminOnly requiredFeature="settings"><Settings /></ProtectedRoute>} />
       </Route>
       <Route path="billing/success" element={<BillingSuccess />} />

@@ -44,7 +44,7 @@ export default function CallHistory() {
 
   return (
     <div className="page-enter">
-      <h1 className="text-xl sm:text-2xl font-bold text-main mb-6">Call History</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-main mb-6">Call Logs</h1>
 
       <div className="card mb-4 flex flex-col sm:flex-row sm:flex-wrap gap-3">
         <input className="input w-full sm:max-w-xs" placeholder="Search phone..." value={filters.search}
@@ -86,6 +86,7 @@ export default function CallHistory() {
                 <th className="pb-3 pr-4">Phone</th>
                 <th className="pb-3 pr-4">Source</th>
                 <th className="pb-3 pr-4">Type</th>
+                <th className="pb-3 pr-4">IVR</th>
                 <th className="pb-3 pr-4">Status</th>
                 <th className="pb-3 pr-4">Duration</th>
                 <th className="pb-3 pr-4">Date/Time</th>
@@ -101,6 +102,11 @@ export default function CallHistory() {
                   <td className="py-3 pr-4">{c.customerPhone}</td>
                   <td className="py-3 pr-4">{c.lead ? SOURCE_LABELS[c.lead.source] : '-'}</td>
                   <td className="py-3 pr-4">{c.callType}</td>
+                  <td className="py-3 pr-4 text-xs text-muted">
+                    {c.sourceMode === 'EXTERNAL_IVR' && c.provider
+                      ? `via ${c.provider}`
+                      : c.provider || c.sourceMode || '—'}
+                  </td>
                   <td className="py-3 pr-4">
                     <span className={`badge ${c.callStatus === 'ANSWERED' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
                       {c.callStatus}
