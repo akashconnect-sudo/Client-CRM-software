@@ -86,7 +86,16 @@ export async function triggerWelcomeEmail(userId) {
   }
 
   if (job.status === 'PROCESSING') {
-    return { ok: true, skipped: true, reason: 'in_flight' };
+    // Recover stuck claims older than 2 minutes so welcome can retry.
+    const ageMs = Date.now() - new Date(job.updatedAt).getTime();
+    if (ageMs < 2 * 60 * 1000) {
+      return { ok: true, skipped: true, reason: 'in_flight' };
+    }
+    await prisma.emailJob.update({
+      where: { id: job.id },
+      data: { status: 'FAILED', lastError: 'STALE_PROCESSING_RESET' },
+    });
+    job = { ...job, status: 'FAILED' };
   }
 
   if (job.attempts >= MAX_ATTEMPTS && job.status === 'FAILED') {

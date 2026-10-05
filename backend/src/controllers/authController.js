@@ -315,6 +315,7 @@ export const register = asyncHandler(async (req, res) => {
     }
 
     const token = issueToken(user);
+    triggerWelcomeEmailAsync(user.id);
     return res.status(201).json({
       success: true,
       message: `Workspace ready — ${env.trialDays}-day free trial started. No card required.`,
@@ -420,10 +421,14 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   const token = issueToken(user);
+  // First successful login → welcome (idempotent; also covered by /me + dashboard).
+  triggerWelcomeEmailAsync(user.id);
   res.json({ success: true, data: { token, user: toSafeUser(user) } });
 });
 
 export const me = asyncHandler(async (req, res) => {
+  // Reliable path: AuthContext always hits /me after login — does not depend on frontend build.
+  triggerWelcomeEmailAsync(req.user.id);
   res.json({ success: true, data: toSafeUser(req.user) });
 });
 
