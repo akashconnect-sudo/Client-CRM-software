@@ -12,6 +12,11 @@ function cleanEnv(value, fallback = '') {
   return trimmed || fallback;
 }
 
+/** Gmail App Password UI shows spaces — SMTP needs 16 chars without spaces. */
+function cleanSmtpPass(value) {
+  return cleanEnv(value, '').replace(/\s+/g, '');
+}
+
 /** jwt.sign expiresIn must be seconds (number) or timespan string e.g. 7d, 12h */
 function parseJwtExpiresIn(value) {
   const raw = cleanEnv(value, '7d');
@@ -94,7 +99,7 @@ export const env = {
   smtpHost: cleanEnv(process.env.SMTP_HOST, 'smtp.gmail.com'),
   smtpPort: parseInt(cleanEnv(process.env.SMTP_PORT, '587'), 10) || 587,
   smtpUser: cleanEnv(process.env.SMTP_USER, ''),
-  smtpPass: cleanEnv(process.env.SMTP_PASS, ''),
+  smtpPass: cleanSmtpPass(process.env.SMTP_PASS),
   smtpFrom: cleanEnv(process.env.SMTP_FROM, ''),
   googleClientId: cleanEnv(process.env.GOOGLE_CLIENT_ID, ''),
   googleClientSecret: cleanEnv(process.env.GOOGLE_CLIENT_SECRET, ''),

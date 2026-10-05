@@ -1,7 +1,8 @@
-import nodemailer from 'nodemailer';
 import prisma from '../config/db.js';
 import { env } from '../config/env.js';
 import { planHasEmailAlerts } from '../constants/planFeatures.js';
+import { sendCrmMail } from './mailTransport.js';
+
 function resolveNotificationPath(notification) {
   const { type, leadId, callId, title } = notification;
   if (leadId) {
@@ -14,21 +15,6 @@ function resolveNotificationPath(notification) {
   if (type === 'ADMIN_NOTICE') return '/settings';
   if (title?.toLowerCase().includes('unassigned')) return '/leads?status=NEW';
   return '/';
-}
-
-let mailTransporter;
-
-function getMailTransporter() {
-  if (!env.smtpUser || !env.smtpPass) return null;
-  if (!mailTransporter) {
-    mailTransporter = nodemailer.createTransport({
-      host: env.smtpHost,
-      port: env.smtpPort,
-      secure: env.smtpPort === 465,
-      auth: { user: env.smtpUser, pass: env.smtpPass },
-    });
-  }
-  return mailTransporter;
 }
 
 function roleLabel(role) {
@@ -131,8 +117,7 @@ export async function sendNotificationEmail({
   notification,
   kind,
 }) {
-  const transport = getMailTransporter();
-  if (!transport || !to) {
+  if (!to) {
     if (env.nodeEnv !== 'production') {
       console.log('[Notification email skipped]', { to, title, message: message?.slice(0, 80) });
     }
@@ -152,8 +137,7 @@ export async function sendNotificationEmail({
   });
 
   try {
-    await transport.sendMail({
-      from: env.smtpFrom || `"Sales Lead CRM" <${env.smtpUser}>`,
+    await sendCrmMail({
       to,
       subject: `${title} — ${companyName || 'Sales Lead CRM'}`,
       text: `${title}\n\n${message}\n\nFrom: ${senderName || 'Admin'} (${companyName || 'CRM'})\n${actionUrl || ''}`,

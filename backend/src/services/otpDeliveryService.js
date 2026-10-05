@@ -1,32 +1,14 @@
-import nodemailer from 'nodemailer';
 import { env } from '../config/env.js';
-
-let mailTransporter;
-
-function getMailTransporter() {
-  if (!env.smtpUser || !env.smtpPass) return null;
-  if (!mailTransporter) {
-    mailTransporter = nodemailer.createTransport({
-      host: env.smtpHost,
-      port: env.smtpPort,
-      secure: env.smtpPort === 465,
-      auth: { user: env.smtpUser, pass: env.smtpPass },
-    });
-  }
-  return mailTransporter;
-}
+import { sendCrmMail } from './mailTransport.js';
 
 async function sendEmailOtp(email, otp, gstin) {
-  const transport = getMailTransporter();
-  if (!transport) return false;
-
   const minutes = env.gstOtpExpiryMinutes;
-  await transport.sendMail({
-    from: env.smtpFrom || `"Sales Lead CRM" <${env.smtpUser}>`,
-    to: email,
-    subject: `GST verification OTP — ${gstin}`,
-    text: `Your GST registration OTP is: ${otp}\n\nValid for ${minutes} minutes.\n\n— Sales Lead CRM`,
-    html: `
+  try {
+    await sendCrmMail({
+      to: email,
+      subject: `GST verification OTP — ${gstin}`,
+      text: `Your GST registration OTP is: ${otp}\n\nValid for ${minutes} minutes.\n\n— Sales Lead CRM`,
+      html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
         <h2 style="color:#16a34a">GST verification</h2>
         <p>Your OTP for GST <strong>${gstin}</strong>:</p>
@@ -35,8 +17,11 @@ async function sendEmailOtp(email, otp, gstin) {
         <p style="color:#999;font-size:12px">Sales Lead CRM</p>
       </div>
     `,
-  });
-  return true;
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function sendSmsHttp(mobile, otp, gstin) {

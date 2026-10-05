@@ -1,30 +1,16 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
 import prisma from '../config/db.js';
 import { env } from '../config/env.js';
 import { maskEmail, maskPhone, normalizeIndianMobile } from '../utils/maskContact.js';
 import { deliverAuthPhoneOtp } from './otpDeliveryService.js';
+import { sendCrmMail } from './mailTransport.js';
 
 const OTP_LENGTH = 6;
 const OTP_CHARS = '0123456789';
 
-let mailTransporter;
 let tableReady = false;
-
-function getMailTransporter() {
-  if (!env.smtpUser || !env.smtpPass) return null;
-  if (!mailTransporter) {
-    mailTransporter = nodemailer.createTransport({
-      host: env.smtpHost,
-      port: env.smtpPort,
-      secure: env.smtpPort === 465,
-      auth: { user: env.smtpUser, pass: env.smtpPass },
-    });
-  }
-  return mailTransporter;
-}
 
 async function ensureAuthOtpTable() {
   if (tableReady) return;
@@ -121,51 +107,40 @@ export async function sendAuthEmailOtp(email, purpose = 'auth') {
     VALUES (${challengeId}, ${normalized}, ${purpose}, ${otpHash}, false, ${expiresAt})
   `;
 
-  const transport = getMailTransporter();
-  if (!transport) {
-    const hint = process.env.VERCEL
-      ? 'Add SMTP_USER and SMTP_PASS (Gmail App Password) in Vercel → Project → Settings → Environment Variables, then redeploy.'
-      : 'Add SMTP_USER and SMTP_PASS (Gmail App Password) in backend/.env';
-    throw Object.assign(new Error(`Email is not configured. ${hint}`), {
-      statusCode: 503,
-      code: 'SMTP_NOT_CONFIGURED',
-    });
-  }
-
+  // OTP always goes TO the address the user typed; FROM is salesleadcrm SMTP mailbox.
   const minutes = env.authOtpExpiryMinutes;
-  const mailPayload = {
-    from: env.smtpFrom || `"Sales Lead CRM" <${env.smtpUser}>`,
-    to: normalized,
-    subject: 'Your verification code — Sales Lead CRM',
-    text: `Your verification code is: ${otp}\n\nValid for ${minutes} minutes. Do not share this code.`,
-    html: `
+  try {
+    await sendCrmMail({
+      to: normalized,
+      subject: 'Your verification code — Sales Lead CRM',
+      text: `Your verification code is: ${otp}\n\nValid for ${minutes} minutes. Do not share this code.\n\n— Sales Lead CRM`,
+      html: `
       <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:16px;color:#f8fafc">
-        <p style="margin:0;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#c9a227">Secure verification</p>
-        <p style="font-size:32px;font-weight:700;letter-spacing:10px;color:#f4d47a;margin:20px 0">${otp}</p>
-        <p style="color:#94a3b8;font-size:14px;margin:0">Valid for ${minutes} minutes.</p>
+        <p style="margin:0;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#c9a227">Sales Lead CRM</p>
+        <p style="margin:12px 0 0;font-size:18px;font-weight:600;color:#f8fafc">Your verification code</p>
+        <p style="font-size:36px;font-weight:700;letter-spacing:12px;color:#f4d47a;margin:24px 0">${otp}</p>
+        <p style="color:#94a3b8;font-size:14px;margin:0">Sent to <strong style="color:#e2e8f0">${normalized}</strong>. Valid for ${minutes} minutes. Do not share this code.</p>
       </div>
     `,
-  };
-
-  try {
-    await transport.sendMail(mailPayload);
+    });
     return {
       challengeId,
       maskedEmail: maskEmail(normalized),
       expiresInMinutes: env.authOtpExpiryMinutes,
     };
   } catch (err) {
-    console.error('[Auth email OTP]', err.message);
+    if (err.code === 'SMTP_NOT_CONFIGURED') throw err;
 
     const isAuth =
       String(err.message || '').includes('535') ||
-      String(err.message || '').toLowerCase().includes('authentication');
+      String(err.message || '').toLowerCase().includes('authentication') ||
+      err.responseCode === 535;
 
     throw Object.assign(
       new Error(
         isAuth
-          ? 'Could not send email. In backend/.env set SMTP_PASS to a Gmail App Password (Google Account → Security → App passwords), not your normal password.'
-          : 'Could not send verification email. Check SMTP settings in backend/.env'
+          ? 'Could not send email. Set SMTP_PASS to the Gmail App Password for salesleadcrm@gmail.com (16 characters, spaces optional).'
+          : 'Could not send verification email. Check SMTP settings on the server.'
       ),
       { statusCode: 503, code: 'SMTP_FAILED' }
     );
