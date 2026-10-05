@@ -37,6 +37,18 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+// Durable outbound mail jobs (welcome today; more types later).
+enum EmailJobType {
+  WELCOME
+}
+
+enum EmailJobStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
 enum LeadSource {
   GOOGLE_ADS
   META_ADS
@@ -159,6 +171,8 @@ model User {
   ivrAgentId    String?        @map("ivr_agent_id")
   ivrExtension  String?        @map("ivr_extension")
   status        EmployeeStatus @default(ACTIVE)
+  // Set once welcome email is successfully delivered (idempotency).
+  welcomeEmailSentAt DateTime? @map("welcome_email_sent_at")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
 
@@ -170,6 +184,7 @@ model User {
   notifications           Notification[]
   aiJobs                  AiJob[]
   callRecordingAccesses   CallRecordingAccess[]
+  emailJobs               EmailJob[]
 
   @@unique([companyId, email])
   @@unique([companyId, oauthProvider, oauthSubject])
@@ -473,4 +488,28 @@ model AuthOtpChallenge {
 
   @@index([email, verified])
   @@map("auth_otp_challenges")
+}
+
+// Outbox for transactional emails.
+// Trigger: Dashboard → POST /auth/triggers/welcome → WELCOME job (one per user).
+model EmailJob {
+  id        String         @id @default(uuid())
+  companyId String         @map("company_id")
+  userId    String         @map("user_id")
+  type      EmailJobType
+  toEmail   String         @map("to_email")
+  status    EmailJobStatus @default(PENDING)
+  attempts  Int            @default(0)
+  lastError String?        @map("last_error")
+  payload   Json?
+  sentAt    DateTime?      @map("sent_at")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([status, createdAt])
+  @@index([companyId])
+  @@map("email_jobs")
 }

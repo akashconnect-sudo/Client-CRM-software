@@ -112,6 +112,8 @@ export const env = {
   /** Private S3 bucket for Amazon Connect call recordings (presigned playback). */
   recordingsBucket: cleanEnv(process.env.RECORDINGS_BUCKET, ''),
   awsRegion: cleanEnv(process.env.AWS_REGION, 'ap-south-1'),
+  /** AWS Lambda function name or ARN that sends the professional welcome email. */
+  welcomeEmailLambdaName: cleanEnv(process.env.WELCOME_EMAIL_LAMBDA_NAME, ''),
 };
 
 export function apiPublicUrl(req) {

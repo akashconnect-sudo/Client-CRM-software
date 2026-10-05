@@ -15,7 +15,7 @@ import {
   Line,
   Legend,
 } from 'recharts';
-import { reportsApi, followUpsApi, employeesApi } from '../api';
+import { reportsApi, followUpsApi, employeesApi, authApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import EnterpriseAIAdvisor from '../components/EnterpriseAIAdvisor';
 import DashboardActionDock from '../components/DashboardActionDock';
@@ -121,6 +121,12 @@ export default function Dashboard() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showEnterpriseAdvisor]);
+
+  // Long-term trigger: first dashboard visit → backend enqueues one-time WELCOME email.
+  useEffect(() => {
+    if (!user?.id) return;
+    authApi.triggerWelcome().catch(() => {});
+  }, [user?.id]);
 
   const intake7d = useMemo(
     () => (data?.leadsLast7Days || []).reduce((s, d) => s + (d.count || 0), 0),

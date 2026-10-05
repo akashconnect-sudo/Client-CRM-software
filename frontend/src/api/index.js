@@ -10,6 +10,8 @@ export const authApi = {
   login: (data) => client.post('/auth/login', data),
   oauthProviders: () => client.get('/auth/oauth/providers'),
   me: () => client.get('/auth/me'),
+  /** Fire-and-forget: one-time welcome email after first dashboard load. */
+  triggerWelcome: () => client.post('/auth/triggers/welcome'),
   updateProfile: (data) => client.patch('/auth/profile', data),
   logout: () => client.post('/auth/logout'),
 };

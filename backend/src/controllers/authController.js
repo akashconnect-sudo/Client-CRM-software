@@ -30,6 +30,7 @@ import {
 import { normalizeIndianMobile } from '../utils/maskContact.js';
 import { assertPassword } from '../utils/passwordPolicy.js';
 import { hasWorkspaceAccess } from '../utils/subscriptionAccess.js';
+import { triggerWelcomeEmailAsync } from '../services/welcomeEmailService.js';
 
 function issueToken(user) {
   return jwt.sign(
@@ -424,6 +425,19 @@ export const login = asyncHandler(async (req, res) => {
 
 export const me = asyncHandler(async (req, res) => {
   res.json({ success: true, data: toSafeUser(req.user) });
+});
+
+/**
+ * Dashboard trigger: enqueue/process one-time WELCOME email for the signed-in user.
+ * Safe to call on every dashboard visit — idempotent via EmailJob + welcomeEmailSentAt.
+ */
+export const triggerWelcome = asyncHandler(async (req, res) => {
+  triggerWelcomeEmailAsync(req.user.id);
+  res.json({
+    success: true,
+    message: 'Welcome email trigger accepted',
+    data: { queued: true },
+  });
 });
 
 export const updateProfile = asyncHandler(async (req, res) => {

@@ -1,0 +1,15 @@
+{
+  "name": "welcome-email",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sales Lead CRM — professional welcome email via SES (or SMTP fallback)",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.700.0",
+    "nodemailer": "^8.0.8"
+  }
+}

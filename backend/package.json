@@ -21,6 +21,7 @@
     "ai:worker": "node scripts/ai-worker.js"
   },
   "dependencies": {
+    "@aws-sdk/client-lambda": "^3.1146.0",
     "@aws-sdk/client-s3": "^3.1146.0",
     "@aws-sdk/s3-request-presigner": "^3.1146.0",
     "@langchain/core": "^0.3.80",

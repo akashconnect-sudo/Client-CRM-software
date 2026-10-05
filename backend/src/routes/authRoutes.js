@@ -13,6 +13,7 @@ import {
   verifyEmailOtp,
   sendPhoneOtp,
   verifyPhoneOtp,
+  triggerWelcome,
 } from '../controllers/authController.js';
 import { authenticate, optionalAuthenticate } from '../middleware/auth.js';
 
@@ -29,6 +30,8 @@ router.post('/phone-otp/verify', verifyPhoneOtp);
 router.post('/register', register);
 router.post('/login', login);
 router.get('/me', authenticate, me);
+/** First dashboard visit → one-time welcome email (idempotent). */
+router.post('/triggers/welcome', authenticate, triggerWelcome);
 router.patch('/profile', authenticate, updateProfile);
 router.post('/logout', authenticate, logout);
 
