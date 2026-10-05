@@ -1,15 +1,19 @@
 """
-AWS Lambda (Python 3.12) — professional Sales Lead CRM welcome email.
+AWS Lambda (Python 3.12) — Sales Lead CRM transactional mail.
 
-Deploy: paste into Console (welcome-email) OR zip this file as lambda_function.py
+Supports:
+  type=WELCOME (default) — professional welcome email
+  type=OTP — login/register verification code (to = end-user email)
+
+Deploy: paste into Console (welcome-email) as lambda_function.py
 Runtime: Python 3.12
 Handler: lambda_function.lambda_handler
 
 Env:
   MAIL_FROM       e.g. Sales Lead CRM <salesleadcrm@gmail.com>
-  MAIL_TRANSPORT  ses | smtp  (default ses)
+  MAIL_TRANSPORT  ses | smtp
   SITE_URL        https://salesleadcrm.duckdns.org
-  SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS  (if MAIL_TRANSPORT=smtp)
+  SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS
 """
 
 from __future__ import annotations
@@ -29,6 +33,11 @@ import boto3
 def _env(name: str, default: str = "") -> str:
     v = os.environ.get(name)
     return default if v is None or str(v).strip() == "" else str(v).strip()
+
+
+def _smtp_pass() -> str:
+    # Gmail App Passwords are often copied with spaces
+    return _env("SMTP_PASS").replace(" ", "")
 
 
 def _role_label(role: str | None) -> str:
@@ -215,11 +224,45 @@ def _send_ses(*, to: str, subject: str, text: str, html: str, mail_from: str) ->
     return out.get("MessageId") or ""
 
 
+def build_otp_email(*, otp: str, to: str, minutes: int) -> tuple[str, str, str]:
+    code = escape(str(otp || "").strip())
+    safe_to = escape(to)
+    mins = int(minutes or 10)
+    subject = "Your verification code — Sales Lead CRM"
+    text = (
+        f"Your verification code is: {otp}\n\n"
+        f"Valid for {mins} minutes. Do not share this code.\n\n"
+        f"— Sales Lead CRM"
+    )
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+<body style="margin:0;padding:0;background:#0b1220;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0b1220;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;">
+        <tr><td style="background:#0f172a;padding:28px 32px;">
+          <p style="margin:0;font-size:12px;letter-spacing:0.28em;text-transform:uppercase;color:#d4af37;font-weight:600;">Sales Lead CRM</p>
+          <h1 style="margin:12px 0 0;font-size:24px;color:#f8fafc;">Verification code</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <p style="margin:0 0 8px;font-size:14px;color:#64748b;">Sent to <strong style="color:#0f172a;">{safe_to}</strong></p>
+          <p style="margin:16px 0;font-size:40px;font-weight:700;letter-spacing:12px;color:#0f172a;text-align:center;">{code}</p>
+          <p style="margin:0;font-size:14px;color:#64748b;text-align:center;">Valid for {mins} minutes. Do not share this code.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+    return subject, text, html
+
+
 def _send_smtp(*, to: str, subject: str, text: str, html: str, mail_from: str) -> str:
     host = _env("SMTP_HOST", "smtp.gmail.com")
     port = int(_env("SMTP_PORT", "587") or "587")
     user = _env("SMTP_USER")
-    password = _env("SMTP_PASS")
+    password = _smtp_pass()
     if not user or not password:
         raise RuntimeError("SMTP_USER / SMTP_PASS not configured on Lambda")
 
@@ -230,12 +273,13 @@ def _send_smtp(*, to: str, subject: str, text: str, html: str, mail_from: str) -
     msg.attach(MIMEText(text, "plain", "utf-8"))
     msg.attach(MIMEText(html, "html", "utf-8"))
 
+    # Envelope sender must be the authenticated mailbox (not display-name form)
     with smtplib.SMTP(host, port, timeout=30) as server:
         server.ehlo()
         server.starttls()
         server.ehlo()
         server.login(user, password)
-        server.sendmail(mail_from if "<" not in mail_from else user, [to], msg.as_string())
+        server.sendmail(user, [to], msg.as_string())
 
     return "smtp-ok"
 
@@ -246,16 +290,26 @@ def lambda_handler(event, context):
     if not to or "@" not in to:
         return {"ok": False, "error": "INVALID_TO"}
 
-    site_url = payload.get("siteUrl") or _env("SITE_URL", "https://salesleadcrm.duckdns.org")
-    dashboard_url = payload.get("dashboardUrl") or f"{site_url.rstrip('/')}/dashboard"
+    mail_type = str(payload.get("type") or "WELCOME").strip().upper()
+    if payload.get("otp") and mail_type == "WELCOME":
+        mail_type = "OTP"
 
-    subject, text, html = build_welcome_email(
-        name=payload.get("name"),
-        company_name=payload.get("companyName"),
-        role=payload.get("role"),
-        dashboard_url=dashboard_url,
-        site_url=site_url,
-    )
+    if mail_type == "OTP":
+        otp = str(payload.get("otp") or "").strip()
+        if not re.fullmatch(r"\d{6}", otp):
+            return {"ok": False, "error": "INVALID_OTP"}
+        minutes = int(payload.get("expiresInMinutes") or payload.get("minutes") or 10)
+        subject, text, html = build_otp_email(otp=otp, to=to, minutes=minutes)
+    else:
+        site_url = payload.get("siteUrl") or _env("SITE_URL", "https://salesleadcrm.duckdns.org")
+        dashboard_url = payload.get("dashboardUrl") or f"{site_url.rstrip('/')}/dashboard"
+        subject, text, html = build_welcome_email(
+            name=payload.get("name"),
+            company_name=payload.get("companyName"),
+            role=payload.get("role"),
+            dashboard_url=dashboard_url,
+            site_url=site_url,
+        )
 
     mail_from = (
         _env("MAIL_FROM")
@@ -276,14 +330,25 @@ def lambda_handler(event, context):
             message_id = _send_ses(to=to, subject=subject, text=text, html=html, mail_from=mail_from)
             provider = "ses"
 
-        print(json.dumps({"level": "info", "msg": "welcome_email_sent", "to": to, "provider": provider}))
+        print(
+            json.dumps(
+                {
+                    "level": "info",
+                    "msg": "mail_sent",
+                    "type": mail_type,
+                    "to": to,
+                    "provider": provider,
+                }
+            )
+        )
         return {
             "ok": True,
             "sent": True,
+            "type": mail_type,
             "provider": provider,
             "messageId": message_id,
             "to": to,
         }
-    except Exception as err:  # noqa: BLE001 — surface to CRM for EmailJob FAILED
-        print(json.dumps({"level": "error", "msg": "welcome_email_failed", "to": to, "error": str(err)}))
-        return {"ok": False, "sent": False, "error": str(err), "to": to}
+    except Exception as err:  # noqa: BLE001 — surface to CRM
+        print(json.dumps({"level": "error", "msg": "mail_failed", "type": mail_type, "to": to, "error": str(err)}))
+        return {"ok": False, "sent": False, "error": str(err), "to": to, "type": mail_type}

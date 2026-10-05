@@ -1,36 +1,18 @@
-import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
 import prisma from '../config/db.js';
 import { env } from '../config/env.js';
+import { invokeMailLambda } from './lambdaMail.js';
 
 const MAX_ATTEMPTS = 5;
-
-let lambdaClient;
-
-function getLambda() {
-  if (!lambdaClient) {
-    lambdaClient = new LambdaClient({
-      region: env.awsRegion || 'ap-south-1',
-    });
-  }
-  return lambdaClient;
-}
 
 function appBaseUrl() {
   return (env.frontendUrl || 'http://localhost:5173').split(',')[0].trim().replace(/\/$/, '');
 }
 
-/**
- * Deliver welcome mail via AWS Lambda (professional HTML lives in the function).
- * CRM must NOT send SMTP/SES itself for welcome — Lambda owns the template + send.
- */
+/** Deliver welcome mail via AWS Lambda. */
 async function deliverWelcomeViaLambda(user, job) {
-  const functionName = env.welcomeEmailLambdaName;
-  if (!functionName) {
-    return { sent: false, error: 'WELCOME_EMAIL_LAMBDA_NAME_NOT_CONFIGURED' };
-  }
-
   const siteUrl = appBaseUrl();
-  const payload = {
+  return invokeMailLambda({
+    type: 'WELCOME',
     to: user.email,
     email: user.email,
     name: user.name,
@@ -41,55 +23,7 @@ async function deliverWelcomeViaLambda(user, job) {
     userId: user.id,
     companyId: user.companyId,
     jobId: job.id,
-  };
-
-  try {
-    const out = await getLambda().send(
-      new InvokeCommand({
-        FunctionName: functionName,
-        InvocationType: 'RequestResponse',
-        Payload: Buffer.from(JSON.stringify(payload)),
-      })
-    );
-
-    if (out.FunctionError) {
-      const raw = out.Payload ? Buffer.from(out.Payload).toString('utf8') : out.FunctionError;
-      return { sent: false, error: `LAMBDA_ERROR:${String(raw).slice(0, 200)}` };
-    }
-
-    let body = {};
-    if (out.Payload) {
-      try {
-        body = JSON.parse(Buffer.from(out.Payload).toString('utf8'));
-      } catch {
-        body = {};
-      }
-    }
-
-    // API Gateway-style envelope support
-    if (body && typeof body.body === 'string') {
-      try {
-        body = JSON.parse(body.body);
-      } catch {
-        /* keep */
-      }
-    }
-
-    if (body?.ok && body?.sent !== false) {
-      return {
-        sent: true,
-        provider: body.provider || 'lambda',
-        messageId: body.messageId || null,
-      };
-    }
-
-    return {
-      sent: false,
-      error: String(body?.error || 'LAMBDA_SEND_FAILED').slice(0, 500),
-    };
-  } catch (err) {
-    return { sent: false, error: err.message || 'LAMBDA_INVOKE_FAILED' };
-  }
+  });
 }
 
 async function ensureWelcomeJob(user) {
