@@ -2,6 +2,8 @@ import prisma from '../config/db.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { MAX_PAGE_SIZE } from '../constants/limits.js';
 import { initiateOutboundCall } from '../services/ivrCallService.js';
+import { createRecordingPresignedUrl } from '../services/recordingService.js';
+import { logActivity } from '../services/leadActivityService.js';
 
 function buildCallWhere(companyId, query, employeeScopeId) {
   const where = { companyId };
@@ -88,6 +90,58 @@ export const getCallsByLead = asyncHandler(async (req, res) => {
     orderBy: { callStartTime: 'desc' },
   });
   res.json({ success: true, data: calls });
+});
+
+/**
+ * GET /api/calls/:id/recording — presigned S3 URL (300s).
+ * Tenant + role scoped. Key always from DB.
+ */
+export const getCallRecording = asyncHandler(async (req, res) => {
+  const call = await prisma.callLog.findFirst({
+    where: { id: req.params.id, companyId: req.companyId },
+    select: {
+      id: true,
+      companyId: true,
+      employeeId: true,
+      leadId: true,
+      recordingKey: true,
+      recordingUrl: true,
+    },
+  });
+
+  if (!call) {
+    return res.status(404).json({ success: false, message: 'Call not found' });
+  }
+
+  const role = req.user.role;
+  if (role === 'SALES_EMPLOYEE' && call.employeeId !== req.user.id) {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
+  // MANAGER / SUPER_ADMIN: all calls in the company (no manager→team relation in schema)
+
+  if (!call.recordingKey) {
+    return res.status(404).json({ success: false, message: 'Recording not available yet' });
+  }
+
+  const { url, expiresIn } = await createRecordingPresignedUrl(call.recordingKey, 300);
+
+  await prisma.callRecordingAccess.create({
+    data: {
+      companyId: req.companyId,
+      callId: call.id,
+      userId: req.user.id,
+    },
+  });
+
+  if (call.leadId) {
+    await logActivity(call.leadId, 'CALL_MADE', 'Call recording played', {
+      callId: call.id,
+      userId: req.user.id,
+      action: 'RECORDING_PLAY',
+    }).catch(() => {});
+  }
+
+  res.json({ success: true, data: { url, expiresIn } });
 });
 
 export const initiateCall = asyncHandler(async (req, res) => {

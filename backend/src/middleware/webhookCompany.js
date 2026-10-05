@@ -1,24 +1,47 @@
+import prisma from '../config/db.js';
 import { getCompanyById } from '../services/companyService.js';
 import { hasWorkspaceAccess } from '../utils/subscriptionAccess.js';
 
-/** Webhooks: ?companyId=UUID or header X-Company-Id */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Webhooks: header x-company-id (preferred), then ?companyId=, then legacy ?gstin= */
 export const resolveWebhookCompany = async (req, res, next) => {
-  const companyId = req.query.companyId || req.headers['x-company-id'];
-  if (!companyId) {
-    return res.status(400).json({
-      success: false,
-      message: 'Company ID required. Add ?companyId=YOUR_COMPANY_ID to the webhook URL (see Settings).',
-    });
-  }
+  try {
+    const headerId = req.headers['x-company-id'];
+    const queryCompanyId = req.query.companyId;
+    const gstin = req.query.gstin;
 
-  const company = await getCompanyById(companyId);
-  if (!company) {
-    return res.status(404).json({ success: false, message: 'Company not found' });
-  }
-  if (!hasWorkspaceAccess(company) || company.status !== 'ACTIVE') {
-    return res.status(403).json({ success: false, message: 'Company subscription is not active' });
-  }
+    let company = null;
 
-  req.companyId = company.id;
-  next();
+    if (headerId) {
+      if (!UUID_RE.test(String(headerId))) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+      company = await getCompanyById(String(headerId));
+    } else if (queryCompanyId) {
+      if (!UUID_RE.test(String(queryCompanyId))) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+      company = await getCompanyById(String(queryCompanyId));
+    } else if (gstin) {
+      company = await prisma.company.findUnique({
+        where: { gstin: String(gstin).trim() },
+      });
+    } else {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (!company) {
+      return res.status(404).json({ success: false, message: 'Unauthorized' });
+    }
+    if (!hasWorkspaceAccess(company) || company.status !== 'ACTIVE') {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    req.companyId = company.id;
+    next();
+  } catch {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
 };

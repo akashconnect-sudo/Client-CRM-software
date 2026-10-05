@@ -8,7 +8,10 @@ async function main() {
   await prisma.leadActivity.deleteMany();
   await prisma.note.deleteMany();
   await prisma.followUp.deleteMany();
-  await prisma.callLog.deleteMany();
+  // CallLog delete is blocked by Prisma middleware — wipe via SQL for maintenance only
+  await prisma.$executeRawUnsafe(`UPDATE "ai_jobs" SET "call_log_id" = NULL`);
+  await prisma.$executeRawUnsafe(`DELETE FROM "call_recording_accesses"`);
+  await prisma.$executeRawUnsafe(`DELETE FROM "call_logs"`);
   await prisma.lead.deleteMany();
   await prisma.campaign.deleteMany();
   await prisma.webhookLog.deleteMany();

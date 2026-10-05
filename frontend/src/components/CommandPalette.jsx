@@ -12,13 +12,13 @@ const BASE_ACTIONS = [
   { id: 'gmail', label: 'Gmail Inbox', path: '/inbox/gmail', keys: ['google', 'inbox'] },
   { id: 'rechurn', label: 'Rechurn Customers', path: '/rechurn', keys: ['lost', 'rechurn'] },
   { id: 'whatsapp', label: 'WhatsApp templates', path: '/templates/whatsapp', keys: ['wa', 'template'] },
+  { id: 'calls', label: 'Call Logs', path: '/calls', keys: ['ivr', 'phone', 'recording'] },
   { id: 'new-lead', label: 'Create new customer', path: '/leads?action=new', keys: ['add', 'create'] },
 ];
 
 const ADMIN_ACTIONS = [
   { id: 'allocations', label: 'Allocations', path: '/allocations', keys: ['assign'] },
   { id: 'employees', label: 'Team', path: '/employees', keys: ['team', 'staff'] },
-  { id: 'calls', label: 'Call Logs', path: '/calls', keys: ['ivr', 'phone'] },
   { id: 'reports', label: 'Request Reports', path: '/reports', keys: ['export'] },
   { id: 'analytics', label: 'Analytics', path: '/analytics', keys: ['analytics', 'charts'] },
   { id: 'email', label: 'Email templates', path: '/templates/email', keys: ['email', 'template'] },

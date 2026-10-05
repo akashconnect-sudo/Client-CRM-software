@@ -32,6 +32,8 @@ export const ivrApi = {
   getIntegration: () => client.get('/ivr/integration'),
   saveIntegration: (data) => client.put('/ivr/integration', data),
   testIntegration: () => client.post('/ivr/integration/test'),
+  webhookInfo: () => client.get('/ivr/webhook-info'),
+  rotateWebhookSecret: () => client.post('/ivr/webhook-secret/rotate'),
 };
 
 export const companiesApi = {
@@ -66,6 +68,8 @@ export const leadsApi = {
 
 export const callsApi = {
   list: (params) => client.get('/calls', { params }),
+  get: (id) => client.get(`/calls/${id}`),
+  getRecording: (id) => client.get(`/calls/${id}/recording`),
   initiate: (data) => client.post('/calls/initiate', data),
 };
 

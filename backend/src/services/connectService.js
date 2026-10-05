@@ -15,6 +15,7 @@ export async function processConnectContactEvent(payload, companyId) {
     durationSeconds,
     status: statusRaw,
     recordingUrl,
+    recordingKey,
   } = payload;
 
   if (!contactId || !String(contactId).trim()) {
@@ -37,6 +38,7 @@ export async function processConnectContactEvent(payload, companyId) {
     durationSeconds,
     status: statusRaw,
     recordingUrl,
+    recordingKey,
     startedAt: initiationTimestamp,
     endedAt: disconnectTimestamp,
     notes: noteParts.join(' · '),

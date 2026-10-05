@@ -112,3 +112,69 @@ export async function findIntegrationByWebhook(companyId, token) {
   if (token !== row.webhookSecret) return null;
   return row;
 }
+
+function nativeIvrWebhookUrl(req, companyId) {
+  const base = apiPublicUrl(req) || env.apiBaseUrl || 'http://localhost:5000';
+  return `${base.replace(/\/$/, '')}/api/webhooks/ivr-call-completed`;
+}
+
+/** SUPER_ADMIN: company id + webhook URL (never the secret). */
+export async function getNativeWebhookInfo(companyId, req) {
+  const row = await prisma.iVRIntegration.findUnique({ where: { companyId } });
+  return {
+    companyId,
+    webhookUrl: nativeIvrWebhookUrl(req, companyId),
+    provider: row?.provider || 'AMAZON_CONNECT',
+    status: row?.status || null,
+    hasSecret: Boolean(row?.webhookSecret),
+    headers: {
+      'x-company-id': companyId,
+      'x-webhook-secret': '(rotated secret — shown only once after rotate)',
+      'Content-Type': 'application/json',
+    },
+  };
+}
+
+/**
+ * SUPER_ADMIN: rotate per-company webhook secret for Amazon Connect / IVR Lambda.
+ * Returns the secret ONCE.
+ */
+export async function rotateNativeWebhookSecret(companyId, req) {
+  const secret = crypto.randomBytes(32).toString('hex');
+  const existing = await prisma.iVRIntegration.findUnique({ where: { companyId } });
+
+  const row = await prisma.iVRIntegration.upsert({
+    where: { companyId },
+    create: {
+      companyId,
+      mode: 'NATIVE',
+      provider: 'AMAZON_CONNECT',
+      webhookSecret: secret,
+      status: existing?.status || 'PENDING_VERIFICATION',
+    },
+    update: {
+      webhookSecret: secret,
+      provider: existing?.provider || 'AMAZON_CONNECT',
+      mode: existing?.mode || 'NATIVE',
+    },
+  });
+
+  // Keep settings table in sync for operators who still read it
+  await prisma.setting.upsert({
+    where: { companyId_key: { companyId, key: 'ivr_webhook_secret' } },
+    create: { companyId, key: 'ivr_webhook_secret', value: secret },
+    update: { value: secret },
+  }).catch(async () => {
+    // composite unique may differ — fall back to delete+create
+    await prisma.setting.deleteMany({ where: { companyId, key: 'ivr_webhook_secret' } });
+    await prisma.setting.create({ data: { companyId, key: 'ivr_webhook_secret', value: secret } });
+  });
+
+  return {
+    companyId,
+    webhookUrl: nativeIvrWebhookUrl(req, companyId),
+    webhookSecret: secret,
+    provider: row.provider,
+    message: 'Copy this secret now — it will not be shown again.',
+  };
+}

@@ -69,7 +69,7 @@ function AppRoutes() {
         <Route path="inbox/gmail" element={<ProtectedRoute requiredFeature="gmailInbox"><GmailInbox /></ProtectedRoute>} />
         <Route path="employees" element={<ProtectedRoute adminOnly requiredFeature="employees"><Employees /></ProtectedRoute>} />
         <Route path="employees/:id/performance" element={<ProtectedRoute adminOnly requiredFeature="employees"><EmployeePerformance /></ProtectedRoute>} />
-        <Route path="calls" element={<ProtectedRoute adminOnly requiredFeature="callBridge"><CallHistory /></ProtectedRoute>} />
+        <Route path="calls" element={<ProtectedRoute requiredFeature="callBridge"><CallHistory /></ProtectedRoute>} />
         <Route path="follow-ups" element={<ProtectedRoute requiredFeature="follow-ups"><FollowUps /></ProtectedRoute>} />
         <Route path="calendar" element={<ProtectedRoute requiredFeature="calendar"><FollowUpCalendar /></ProtectedRoute>} />
         <Route path="recurring-follow-ups" element={<ProtectedRoute requiredFeature="recurringFollowUps"><RecurringFollowUps /></ProtectedRoute>} />

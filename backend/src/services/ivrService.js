@@ -1,7 +1,4 @@
-import prisma from '../config/db.js';
-import { normalizePhone } from '../utils/phone.js';
-import { logActivity } from './leadActivityService.js';
-import { createNotification } from './notificationService.js';
+import { upsertNormalizedCall } from './callUpsertService.js';
 
 const CALL_TYPE_MAP = {
   incoming: 'INCOMING',
@@ -23,108 +20,48 @@ const CALL_STATUS_MAP = {
   BUSY: 'BUSY',
 };
 
+/**
+ * Process IVR / Amazon Connect call-completed webhook.
+ * Idempotent on companyId + call_id (externalCallId).
+ * Returns { callLog, created }.
+ */
 export async function processIvrCallCompleted(payload, companyId) {
-  const {
-    call_id: externalCallId,
-    ivr_provider_call_id: ivrProviderCallId,
-    ivr_agent_id: ivrAgentId,
-    customer_phone: customerPhone,
-    employee_id: employeeIdFromPayload,
-    call_type: callTypeRaw,
-    call_status: callStatusRaw,
-    call_start_time: callStartTime,
-    call_end_time: callEndTime,
-    call_duration: durationSeconds,
-    recording_url: recordingUrl,
-    notes,
-    lead_id: leadIdFromPayload,
-  } = payload;
-
-  const phone = customerPhone;
-  const normalized = normalizePhone(phone);
-
-  // Match employee by IVR Agent ID first, then explicit employee_id
-  let employee = null;
-  if (ivrAgentId) {
-    employee = await prisma.user.findFirst({
-      where: { companyId, ivrAgentId: String(ivrAgentId), status: 'ACTIVE' },
-    });
-  }
-  if (!employee && employeeIdFromPayload) {
-    employee = await prisma.user.findFirst({ where: { id: employeeIdFromPayload, companyId } });
+  const externalCallId = payload.call_id || payload.ivr_provider_call_id;
+  if (!externalCallId) {
+    throw Object.assign(new Error('call_id is required'), { statusCode: 400 });
   }
 
-  // Match lead by phone
-  let lead = null;
-  if (leadIdFromPayload) {
-    lead = await prisma.lead.findFirst({ where: { id: leadIdFromPayload, companyId } });
-  }
-  if (!lead && normalized) {
-    const suffix = normalized.slice(-10);
-    const candidates = await prisma.lead.findMany({
-      where: { companyId, phone: { contains: suffix } },
-      select: { id: true, phone: true, customerName: true },
-      take: 10,
-    });
-    lead = candidates.find((l) => normalizePhone(l.phone) === normalized) || null;
-  }
+  const callType = CALL_TYPE_MAP[payload.call_type] || 'OUTGOING';
+  const callStatus = CALL_STATUS_MAP[payload.call_status] || 'ANSWERED';
 
-  const isLinked = !!(lead && employee);
-  const callType = CALL_TYPE_MAP[callTypeRaw] || 'OUTGOING';
-  const callStatus = CALL_STATUS_MAP[callStatusRaw] || 'ANSWERED';
-  const start = callStartTime ? new Date(callStartTime) : new Date();
-  const end = callEndTime ? new Date(callEndTime) : null;
-  const duration = parseInt(durationSeconds, 10) || (end && start ? Math.floor((end - start) / 1000) : 0);
+  let direction = 'INBOUND';
+  if (callType === 'OUTGOING') direction = 'OUTBOUND';
+  if (callType === 'MISSED') direction = 'INBOUND';
 
-  const callLog = await prisma.callLog.create({
-    data: {
-      companyId,
-      leadId: lead?.id || null,
-      employeeId: employee?.id || null,
-      customerPhone: phone,
-      ivrAgentId: ivrAgentId ? String(ivrAgentId) : null,
-      callType,
-      callStatus,
-      callStartTime: start,
-      callEndTime: end,
-      durationSeconds: duration,
-      recordingUrl: recordingUrl || null,
-      ivrProviderCallId: ivrProviderCallId || externalCallId || null,
-      notes,
-      isLinked,
-    },
-    include: {
-      lead: { select: { id: true, customerName: true, source: true, leadNumber: true } },
-      employee: { select: { id: true, name: true } },
-    },
+  const providerRaw = payload.provider ? String(payload.provider).toUpperCase() : null;
+  const sourceMode =
+    providerRaw === 'AMAZON_CONNECT'
+      ? 'NATIVE_IVR'
+      : payload.source_mode || (providerRaw ? 'EXTERNAL_IVR' : 'NATIVE_IVR');
+
+  const { callLog, created } = await upsertNormalizedCall(companyId, {
+    externalCallId: String(externalCallId),
+    customerPhone: payload.customer_phone,
+    agentUsername: payload.ivr_agent_id,
+    direction,
+    callType,
+    status: callStatus,
+    durationSeconds: payload.call_duration,
+    recordingUrl: payload.recording_url || null,
+    recordingKey: payload.recording_key || null,
+    startedAt: payload.call_start_time,
+    endedAt: payload.call_end_time,
+    notes: payload.notes || null,
+    sourceMode,
+    provider: providerRaw,
+    leadId: payload.lead_id || null,
+    employeeId: payload.employee_id || null,
   });
 
-  if (lead) {
-    await logActivity(lead.id, 'CALL_MADE', `Call ${callStatus} - ${duration}s`, {
-      callId: callLog.id,
-      recordingUrl,
-    });
-    if (lead.status === 'NEW' || lead.status === 'ASSIGNED') {
-      await prisma.lead.update({
-        where: { id: lead.id },
-        data: { status: 'CONTACTED' },
-      });
-      await logActivity(lead.id, 'STATUS_CHANGED', 'Status updated to CONTACTED after call');
-    }
-  }
-
-  if (employee && recordingUrl) {
-    await createNotification({
-      userId: employee.id,
-      type: 'CALL_RECORDING',
-      title: 'Call recording saved',
-      message: lead
-        ? `Recording saved for lead ${lead.customerName}`
-        : `Recording saved for call to ${phone}`,
-      leadId: lead?.id,
-      callId: callLog.id,
-    });
-  }
-
-  return callLog;
+  return { callLog, created };
 }

@@ -42,6 +42,8 @@ export default function IvrConnectionCard() {
   const [form, setForm] = useState({ provider: 'EXOTEL', apiKey: '', apiSecret: '', instanceId: '' });
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [webhookInfo, setWebhookInfo] = useState(null);
+  const [rotatedSecret, setRotatedSecret] = useState('');
 
   const load = () => {
     ivrApi
@@ -49,6 +51,10 @@ export default function IvrConnectionCard() {
       .then((res) => setMeta(res.data.data))
       .catch(() => setMeta(null));
     ivrApi.providers().then((res) => setProviders(res.data.data || [])).catch(() => {});
+    ivrApi
+      .webhookInfo()
+      .then((res) => setWebhookInfo(res.data.data))
+      .catch(() => setWebhookInfo(null));
   };
 
   useEffect(() => {
@@ -101,15 +107,53 @@ export default function IvrConnectionCard() {
       </div>
 
       {hasIvrModule && (
-        <div className="rounded-xl border border-default p-4" style={{ background: 'var(--surface-hover)' }}>
-          <p className="text-sm font-medium text-main">Native IVR · Amazon Connect</p>
-          <p className="text-xs text-muted mt-1">
-            Status: {integration?.mode === 'NATIVE' ? integration?.status || 'CONNECTED' : 'Available with IVR module'}
-          </p>
-          <p className="text-xs text-muted mt-2">
-            Lambda posts to <code className="text-[11px]">/api/connect/contact-event?companyId=…</code> with{' '}
-            <code className="text-[11px]">x-webhook-secret</code>.
-          </p>
+        <div className="rounded-xl border border-default p-4 space-y-3" style={{ background: 'var(--surface-hover)' }}>
+          <div>
+            <p className="text-sm font-medium text-main">Native IVR · Amazon Connect</p>
+            <p className="text-xs text-muted mt-1">
+              Status: {integration?.mode === 'NATIVE' ? integration?.status || 'CONNECTED' : 'Available with IVR module'}
+              {webhookInfo?.hasSecret ? ' · webhook secret configured' : ' · rotate a secret before going live'}
+            </p>
+          </div>
+          {webhookInfo && (
+            <div className="text-xs space-y-1 break-all">
+              <p className="text-muted">Company ID</p>
+              <code className="text-main">{webhookInfo.companyId}</code>
+              <p className="text-muted mt-2">Webhook URL</p>
+              <code className="text-main">{webhookInfo.webhookUrl}</code>
+              <p className="text-muted mt-2">
+                Headers: <code>x-company-id</code>, <code>x-webhook-secret</code>
+              </p>
+            </div>
+          )}
+          {rotatedSecret ? (
+            <div className="rounded-lg border border-amber-500/40 p-3 text-xs">
+              <p className="text-amber-400 font-medium mb-1">Copy this secret now — it will not be shown again</p>
+              <code className="text-main break-all">{rotatedSecret}</code>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            className="btn-secondary text-xs"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setMessage('');
+              setRotatedSecret('');
+              try {
+                const res = await ivrApi.rotateWebhookSecret();
+                setRotatedSecret(res.data.data.webhookSecret);
+                setMessage('Webhook secret rotated. Put it in the Lambda COMPANY_MAP.');
+                load();
+              } catch (err) {
+                setMessage(err.response?.data?.message || 'Rotate failed');
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Rotate webhook secret
+          </button>
         </div>
       )}
 

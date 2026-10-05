@@ -109,6 +109,9 @@ export const env = {
   aiInternalSecret: cleanEnv(process.env.AI_INTERNAL_SECRET, ''),
   aiChatModel: cleanEnv(process.env.AI_CHAT_MODEL, 'llama-3.1-8b-instruct'),
   aiEmbedModel: cleanEnv(process.env.AI_EMBED_MODEL, 'bge-small-en'),
+  /** Private S3 bucket for Amazon Connect call recordings (presigned playback). */
+  recordingsBucket: cleanEnv(process.env.RECORDINGS_BUCKET, ''),
+  awsRegion: cleanEnv(process.env.AWS_REGION, 'ap-south-1'),
 };
 
 export function apiPublicUrl(req) {

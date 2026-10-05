@@ -1,5 +1,7 @@
 import { env } from '../config/env.js';
+import prisma from '../config/db.js';
 import { getSetting } from '../services/settingsService.js';
+import { secretsEqual } from '../utils/secretsEqual.js';
 
 export const verifyGoogleWebhook = async (req, res, next) => {
   const secret =
@@ -21,13 +23,38 @@ export const verifyMetaWebhook = async (req, res, next) => {
   next();
 };
 
+/**
+ * Fail-closed IVR / Amazon Connect webhook auth.
+ * Secret from IVRIntegration.webhookSecret, else settings ivr_webhook_secret.
+ * Header only: x-webhook-secret. No global env fallback.
+ */
 export const verifyIvrWebhook = async (req, res, next) => {
-  const secret = (await getSetting(req.companyId, 'ivr_webhook_secret')) || env.ivrWebhookSecret;
-  const provided = req.headers['x-webhook-secret'] || req.headers['x-ivr-secret'] || req.body?.secret;
-  if (secret && provided !== secret) {
-    return res.status(401).json({ success: false, message: 'Invalid IVR webhook secret' });
+  try {
+    if (!req.companyId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const provided = req.headers['x-webhook-secret'];
+    if (typeof provided !== 'string' || !provided) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const integration = await prisma.iVRIntegration.findUnique({
+      where: { companyId: req.companyId },
+      select: { webhookSecret: true },
+    });
+    const fromIntegration = integration?.webhookSecret ? String(integration.webhookSecret) : '';
+    const fromSetting = String((await getSetting(req.companyId, 'ivr_webhook_secret')) || '');
+    const expected = fromIntegration || fromSetting;
+
+    if (!expected || !secretsEqual(provided, expected)) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    next();
+  } catch {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
-  next();
 };
 
 export const verifyConnectWebhook = async (req, res, next) => {
@@ -38,8 +65,8 @@ export const verifyConnectWebhook = async (req, res, next) => {
       message: 'CONNECT_WEBHOOK_SECRET is not configured on the server',
     });
   }
-  const provided = req.headers['x-webhook-secret'] || req.body?.secret;
-  if (provided !== secret) {
+  const provided = req.headers['x-webhook-secret'];
+  if (typeof provided !== 'string' || !secretsEqual(provided, secret)) {
     return res.status(401).json({ success: false, message: 'Invalid Amazon Connect webhook secret' });
   }
   next();

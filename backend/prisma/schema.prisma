@@ -137,9 +137,10 @@ model Company {
   settings            Setting[]
   leadAssignmentState LeadAssignmentState?
   webhookLogs         WebhookLog[]
-  subscription        WorkspaceSubscription?
-  ivrIntegration      IVRIntegration?
-  aiJobs              AiJob[]
+  subscription            WorkspaceSubscription?
+  ivrIntegration          IVRIntegration?
+  aiJobs                  AiJob[]
+  callRecordingAccesses   CallRecordingAccess[]
 
   @@map("companies")
 }
@@ -166,8 +167,9 @@ model User {
   callLogs      CallLog[]
   followUps     FollowUp[]
   notes         Note[]
-  notifications Notification[]
-  aiJobs        AiJob[]
+  notifications           Notification[]
+  aiJobs                  AiJob[]
+  callRecordingAccesses   CallRecordingAccess[]
 
   @@unique([companyId, email])
   @@unique([companyId, oauthProvider, oauthSubject])
@@ -246,6 +248,8 @@ model CallLog {
   callEndTime       DateTime?  @map("call_end_time")
   durationSeconds   Int        @default(0) @map("duration_seconds")
   recordingUrl      String?         @map("recording_url")
+  /// Private S3 object key (bucket from RECORDINGS_BUCKET). Must start with `${companyId}/`.
+  recordingKey      String?         @map("recording_key")
   transcript        String?
   summary           String?
   sentimentLabel    SentimentLabel? @map("sentiment_label")
@@ -258,16 +262,34 @@ model CallLog {
   isLinked          Boolean         @default(true) @map("is_linked")
   createdAt         DateTime        @default(now()) @map("created_at")
 
-  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  lead     Lead?   @relation(fields: [leadId], references: [id])
-  employee User?   @relation(fields: [employeeId], references: [id])
-  aiJobs   AiJob[]
+  company             Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead                Lead?                 @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  employee            User?                 @relation(fields: [employeeId], references: [id])
+  aiJobs              AiJob[]
+  recordingAccesses   CallRecordingAccess[]
 
   @@index([companyId, customerPhone])
   @@index([companyId, employeeId])
   @@index([companyId, leadId])
   @@index([companyId, externalCallId])
   @@map("call_logs")
+}
+
+/// Audit trail when a user plays a call recording (presigned URL issued).
+model CallRecordingAccess {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  callId    String   @map("call_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  call    CallLog @relation(fields: [callId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, callId])
+  @@index([companyId, userId])
+  @@map("call_recording_accesses")
 }
 
 /// Async queue for LangChain / transcription work (too slow for Vercel request limits).

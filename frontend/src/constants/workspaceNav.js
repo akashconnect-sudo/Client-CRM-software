@@ -15,7 +15,7 @@ export const WORKSPACE_NAV = [
       { to: '/inbox/gmail', label: 'Gmail Inbox', icon: NavIcons.gmail, feature: 'gmailInbox' },
       { to: '/follow-ups', label: 'Follow-Ups', icon: NavIcons.followups, feature: 'follow-ups' },
       { to: '/calendar', label: 'Calendar', icon: NavIcons.calendar, feature: 'calendar' },
-      { to: '/calls', label: 'Call Logs', icon: NavIcons.calls, feature: 'callBridge', adminOnly: true },
+      { to: '/calls', label: 'Call Logs', icon: NavIcons.calls, feature: 'callBridge' },
       { to: '/recurring-follow-ups', label: 'Recurring Follow-Ups', icon: NavIcons.recurring, feature: 'recurringFollowUps' },
       { to: '/reports', label: 'Request Reports', icon: NavIcons.reports, feature: 'reports', adminOnly: true },
       { to: '/rechurn', label: 'Rechurn Customers', icon: NavIcons.rechurn, feature: 'rechurn' },

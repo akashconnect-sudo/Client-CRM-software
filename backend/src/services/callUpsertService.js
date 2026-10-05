@@ -59,14 +59,25 @@ export async function resolveLeadByPhone(companyId, customerPhone) {
   return candidates.find((l) => normalizePhone(l.phone) === normalized) || null;
 }
 
+/** Reject keys that do not belong to this tenant prefix. */
+export function sanitizeRecordingKey(companyId, key) {
+  if (key == null || key === '') return null;
+  const value = String(key).trim().replace(/^\/+/, '');
+  if (!value) return null;
+  const prefix = `${companyId}/`;
+  if (!value.startsWith(prefix)) return null;
+  if (value.includes('..')) return null;
+  return value;
+}
+
 /**
  * Shared CallLog upsert for native Connect, external IVR webhooks, and legacy IVR.
  *
  * Normalized input:
  * {
  *   externalCallId, customerPhone, agentUsername, agentExtension,
- *   direction: INBOUND|OUTBOUND, durationSeconds, status, recordingUrl,
- *   startedAt, endedAt, notes, sourceMode, provider
+ *   direction: INBOUND|OUTBOUND, callType, durationSeconds, status,
+ *   recordingUrl, recordingKey, startedAt, endedAt, notes, sourceMode, provider
  * }
  */
 export async function upsertNormalizedCall(companyId, input) {
@@ -82,13 +93,28 @@ export async function upsertNormalizedCall(companyId, input) {
   const phone = rawPhone || null;
   const agentKey = input.agentUsername || input.agentExtension || null;
 
-  const employee = await resolveEmployeeByAgentUsername(companyId, agentKey);
-  const lead = phone ? await resolveLeadByPhone(companyId, phone) : null;
+  let employee = await resolveEmployeeByAgentUsername(companyId, agentKey);
+  if (!employee && input.employeeId) {
+    employee = await prisma.user.findFirst({
+      where: { id: input.employeeId, companyId, status: 'ACTIVE' },
+    });
+  }
+
+  let lead = null;
+  if (input.leadId) {
+    lead = await prisma.lead.findFirst({ where: { id: input.leadId, companyId } });
+  }
+  if (!lead && phone) {
+    lead = await resolveLeadByPhone(companyId, phone);
+  }
 
   const callStatus = STATUS_MAP[input.status] || 'ANSWERED';
-  let callType = 'INCOMING';
-  if (callStatus === 'MISSED') callType = 'MISSED';
-  else if (String(input.direction || '').toUpperCase() === 'OUTBOUND') callType = 'OUTGOING';
+  let callType = input.callType || null;
+  if (!callType || !['INCOMING', 'OUTGOING', 'MISSED'].includes(callType)) {
+    callType = 'INCOMING';
+    if (callStatus === 'MISSED') callType = 'MISSED';
+    else if (String(input.direction || '').toUpperCase() === 'OUTBOUND') callType = 'OUTGOING';
+  }
 
   const start = input.startedAt ? new Date(input.startedAt) : new Date();
   const end = input.endedAt ? new Date(input.endedAt) : null;
@@ -101,6 +127,7 @@ export async function upsertNormalizedCall(companyId, input) {
   const sourceMode = input.sourceMode || 'NATIVE_IVR';
   const provider = input.provider || null;
   const notes = input.notes || null;
+  const recordingKey = sanitizeRecordingKey(companyId, input.recordingKey);
 
   const include = {
     lead: { select: { id: true, customerName: true, source: true, leadNumber: true } },
@@ -117,7 +144,7 @@ export async function upsertNormalizedCall(companyId, input) {
     },
   });
 
-  const hadRecordingBefore = Boolean(existing?.recordingUrl);
+  const hadRecordingBefore = Boolean(existing?.recordingUrl || existing?.recordingKey);
 
   const data = {
     leadId: lead?.id || existing?.leadId || null,
@@ -130,6 +157,7 @@ export async function upsertNormalizedCall(companyId, input) {
     callEndTime: end,
     durationSeconds: duration,
     recordingUrl: input.recordingUrl || existing?.recordingUrl || null,
+    recordingKey: recordingKey || existing?.recordingKey || null,
     ivrProviderCallId: externalCallId,
     externalCallId,
     sourceMode,
@@ -168,7 +196,8 @@ export async function upsertNormalizedCall(companyId, input) {
     }
   }
 
-  if (employee && input.recordingUrl && !hadRecordingBefore) {
+  const hasNewRecording = Boolean(input.recordingUrl || recordingKey);
+  if (employee && hasNewRecording && !hadRecordingBefore) {
     await createNotification({
       userId: employee.id,
       type: 'CALL_RECORDING',
@@ -181,9 +210,9 @@ export async function upsertNormalizedCall(companyId, input) {
     });
   }
 
-  // AI: enqueue transcript+summary+sentiment when a recording first appears
+  // AI: enqueue transcript+summary+sentiment when a public recording URL first appears
   enqueueCallAnalysisIfEligible(companyId, callLog, { hadRecordingBefore }).catch(() => {});
-  if (lead?.id && (created || input.recordingUrl)) {
+  if (lead?.id && (created || hasNewRecording)) {
     enqueuePulseReasoningIfEligible(companyId, lead.id).catch(() => {});
   }
 

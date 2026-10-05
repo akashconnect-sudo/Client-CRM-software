@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getApiErrorMessage } from '../utils/apiError';
 import StatusBadge from '../components/StatusBadge';
-import AudioPlayer from '../components/AudioPlayer';
+import RecordingPlayer from '../components/RecordingPlayer';
 import LoadingSpinner from '../components/LoadingSpinner';
 import LeadPulseBadge from '../components/leads/LeadPulseBadge';
 import { LEAD_STATUSES, SOURCE_LABELS, formatDate, formatDuration } from '../utils/constants';
@@ -166,47 +166,49 @@ export default function LeadDetail() {
             <div className="col-span-2"><span className="text-muted">Requirement</span><p className="font-medium mt-1">{lead.requirement || '-'}</p></div>
           </div>
 
-          {isAdmin && (
-            <div className="card">
-              <h2 className="font-semibold mb-4 text-main">Call History & Recordings</h2>
-              {lead.callLogs?.length === 0 ? (
-                <p className="text-muted text-sm">No calls yet</p>
-              ) : (
-                <div className="space-y-4">
-                  {lead.callLogs.map((c) => (
-                    <div key={c.id} className="border rounded-lg p-4 flex flex-wrap justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium">
-                          {c.callType} &middot; {c.callStatus}
-                          {c.sentimentLabel && (
-                            <span className={`ml-2 text-xs font-semibold sentiment-pill sentiment-pill--${String(c.sentimentLabel).toLowerCase()}`}>
-                              {c.sentimentLabel}
-                              {c.sentimentScore != null ? ` · ${Math.round(Number(c.sentimentScore) * 100)}%` : ''}
-                            </span>
-                          )}
-                          {c.sourceMode === 'EXTERNAL_IVR' && c.provider && (
-                            <span className="ml-2 text-xs font-normal text-muted">via {c.provider}</span>
-                          )}
-                        </p>
-                        <p className="text-sm text-muted">{formatDate(c.callStartTime)} &middot; {formatDuration(c.durationSeconds)}</p>
-                        <p className="text-sm">Agent: {c.employee?.name || 'Unknown'}</p>
-                        {c.summary && (
-                          <p className="text-sm mt-2 text-main"><span className="text-muted">AI summary:</span> {c.summary}</p>
+          <div className="card">
+            <h2 className="font-semibold mb-4 text-main">Call History & Recordings</h2>
+            {lead.callLogs?.length === 0 ? (
+              <p className="text-muted text-sm">No calls yet</p>
+            ) : (
+              <div className="space-y-4">
+                {lead.callLogs.map((c) => (
+                  <div key={c.id} className="border rounded-lg p-4 flex flex-wrap justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">
+                        {c.callType} &middot; {c.callStatus}
+                        {c.sentimentLabel && (
+                          <span className={`ml-2 text-xs font-semibold sentiment-pill sentiment-pill--${String(c.sentimentLabel).toLowerCase()}`}>
+                            {c.sentimentLabel}
+                            {c.sentimentScore != null ? ` · ${Math.round(Number(c.sentimentScore) * 100)}%` : ''}
+                          </span>
                         )}
-                        {c.transcript && (
-                          <details className="mt-2 text-sm">
-                            <summary className="cursor-pointer text-muted">Transcript</summary>
-                            <p className="mt-1 whitespace-pre-wrap text-main">{c.transcript}</p>
-                          </details>
+                        {c.provider && (
+                          <span className="ml-2 text-xs font-normal text-muted">{c.provider}</span>
                         )}
-                      </div>
-                      <AudioPlayer url={c.recordingUrl} />
+                      </p>
+                      <p className="text-sm text-muted">{formatDate(c.callStartTime)} &middot; {formatDuration(c.durationSeconds)}</p>
+                      <p className="text-sm">Agent: {c.employee?.name || 'Unknown'}</p>
+                      {c.summary && (
+                        <p className="text-sm mt-2 text-main"><span className="text-muted">AI summary:</span> {c.summary}</p>
+                      )}
+                      {c.transcript && (
+                        <details className="mt-2 text-sm">
+                          <summary className="cursor-pointer text-muted">Transcript</summary>
+                          <p className="mt-1 whitespace-pre-wrap text-main">{c.transcript}</p>
+                        </details>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                    <RecordingPlayer
+                      callId={c.id}
+                      hasRecordingKey={Boolean(c.recordingKey)}
+                      legacyUrl={c.recordingUrl}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="card">
             <h2 className="font-semibold mb-4 text-main">Timeline</h2>

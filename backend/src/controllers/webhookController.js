@@ -141,12 +141,13 @@ export const ivrCallCompleted = asyncHandler(async (req, res) => {
   await logWebhook(req.companyId, 'IVR', payload, 'RECEIVED', null);
 
   try {
-    const callLog = await processIvrCallCompleted(payload, req.companyId);
+    const { callLog, created } = await processIvrCallCompleted(payload, req.companyId);
     await logWebhook(req.companyId, 'IVR', payload, 'SUCCESS', callLog.id);
-    res.status(201).json({
+    res.status(created ? 201 : 200).json({
       success: true,
-      message: 'Call log saved',
+      message: created ? 'Call log saved' : 'Call log updated',
       data: callLog,
+      created,
     });
   } catch (err) {
     await logWebhook(req.companyId, 'IVR', payload, 'ERROR', err.message);

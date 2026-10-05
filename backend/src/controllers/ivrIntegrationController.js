@@ -5,6 +5,8 @@ import {
   testExternalIvrConnection,
   listIvrProviders,
   findIntegrationByWebhook,
+  getNativeWebhookInfo,
+  rotateNativeWebhookSecret,
 } from '../services/ivrIntegrationService.js';
 import { normalizeExternalIvrPayload } from '../integrations/ivr/index.js';
 import { upsertNormalizedCall } from '../services/callUpsertService.js';
@@ -41,6 +43,16 @@ export const saveIntegration = asyncHandler(async (req, res) => {
 export const testIntegration = asyncHandler(async (req, res) => {
   const data = await testExternalIvrConnection(req.companyId);
   res.json({ success: true, message: 'Connection verified', data });
+});
+
+export const webhookInfo = asyncHandler(async (req, res) => {
+  const data = await getNativeWebhookInfo(req.companyId, req);
+  res.json({ success: true, data });
+});
+
+export const rotateWebhookSecret = asyncHandler(async (req, res) => {
+  const data = await rotateNativeWebhookSecret(req.companyId, req);
+  res.json({ success: true, message: data.message, data });
 });
 
 export const externalWebhook = asyncHandler(async (req, res) => {

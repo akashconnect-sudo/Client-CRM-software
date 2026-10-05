@@ -75,7 +75,10 @@ export const getLead = asyncHandler(async (req, res) => {
   const timeline = await getLeadTimeline(id);
   const payload = { ...lead, timeline };
   if (req.employeeScopeId) {
-    delete payload.callLogs;
+    // Sales employees only see / play their own call logs on the lead
+    payload.callLogs = (payload.callLogs || []).filter(
+      (c) => c.employeeId === req.employeeScopeId
+    );
   }
   res.json({ success: true, data: payload });
 });

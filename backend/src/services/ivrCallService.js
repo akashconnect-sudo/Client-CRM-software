@@ -56,14 +56,15 @@ export async function initiateOutboundCall({ employeeId, leadId, customerPhone }
 
   const now = new Date();
   const end = new Date(now.getTime() + 8000);
-  const callLog = await processIvrCallCompleted({
+  const { callLog } = await processIvrCallCompleted({
+    call_id: `DEMO-${Date.now()}`,
     ivr_provider_call_id: `DEMO-${Date.now()}`,
     ivr_agent_id: employee.ivrAgentId,
     customer_phone: customerPhone,
     employee_id: employeeId,
     lead_id: leadId,
-    call_type: 'outgoing',
-    call_status: 'answered',
+    call_type: 'OUTGOING',
+    call_status: 'ANSWERED',
     call_start_time: now.toISOString(),
     call_end_time: end.toISOString(),
     call_duration: 8,
