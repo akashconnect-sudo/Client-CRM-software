@@ -225,7 +225,7 @@ def _send_ses(*, to: str, subject: str, text: str, html: str, mail_from: str) ->
 
 
 def build_otp_email(*, otp: str, to: str, minutes: int) -> tuple[str, str, str]:
-    code = escape(str(otp || "").strip())
+    code = escape(str(otp or "").strip())
     safe_to = escape(to)
     mins = int(minutes or 10)
     subject = "Your verification code — Sales Lead CRM"
