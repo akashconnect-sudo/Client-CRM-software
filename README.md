@@ -6,7 +6,7 @@ This project is designed for businesses that manage large volumes of leads from 
 
 ## Live Demo
 
-https://sales-crm-ipi.vercel.app/login
+https://salesleadcrm.duckdns.org/
 
 ## Features
 
