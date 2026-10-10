@@ -15,4 +15,4 @@ Disallow: /reports
 Disallow: /settings
 Disallow: /billing/
 
-Sitemap: https://sales-crm-ipi.vercel.app/sitemap.xml
+Sitemap: https://salesleadcrm.duckdns.org/sitemap.xml

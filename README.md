@@ -6,7 +6,11 @@ This project is designed for businesses that manage large volumes of leads from 
 
 ## Live Demo
 
+<<<<<<< HEAD
 https://salesleadcrm.duckdns.org/
+=======
+https://salesleadcrm.duckdns.org/login
+>>>>>>> 5e93e08 (Update domain to salesleadcrm.duckdns.org and add GSC verification)
 
 ## Features
 

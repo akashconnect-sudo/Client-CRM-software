@@ -1,5 +1,5 @@
 /** Canonical site URL — update if custom domain is added */
-export const SITE_URL = 'https://sales-crm-ipi.vercel.app';
+export const SITE_URL = 'https://salesleadcrm.duckdns.org';
 export const SITE_NAME = 'Sales Lead CRM';
 export const SITE_TAGLINE = 'Sales CRM with IVR calling for Indian teams';
 
