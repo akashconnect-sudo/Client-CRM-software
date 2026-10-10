@@ -14,8 +14,6 @@
     "db:migrate-tenant": "node prisma/apply-multitenant-migration.js && prisma db push",
     "db:migrate-subscription": "node prisma/apply-subscription-migration.js && prisma db push",
     "db:seed": "node prisma/seed.js",
-    "db:clear": "node prisma/clear-data.js",
-    "db:reset": "node prisma/clear-data.js && node prisma/seed.js",
     "db:studio": "prisma studio",
     "db:migrate-ai": "node prisma/apply-ai-layer-migration.js && prisma generate && prisma db push",
     "ai:worker": "node scripts/ai-worker.js"
