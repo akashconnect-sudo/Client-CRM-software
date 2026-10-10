@@ -20,7 +20,10 @@
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/|google[a-z0-9]+\\.html|sitemap\\.xml|robots\\.txt|assets/).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
